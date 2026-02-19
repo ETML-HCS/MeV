@@ -1,0 +1,212 @@
+/* ==========================================================================
+   VARIABLES & DESIGN TOKENS
+   ========================================================================== */
+
+:root {
+  /* Colors */
+  --color-primary: #646cff;
+  --color-primary-alpha: #646cffaa;
+  --color-react: #61dafb;
+  --color-react-alpha: #61dafbaa;
+  --color-text-muted: #888;
+  --color-bg: #ffffff;
+  --color-surface: #f9fafb;
+  
+  /* Spacing Scale (8px base) */
+  --space-xs: 0.5rem;   /* 8px */
+  --space-sm: 1rem;     /* 16px */
+  --space-md: 1.5rem;   /* 24px */
+  --space-lg: 2rem;     /* 32px */
+  --space-xl: 3rem;     /* 48px */
+  
+  /* Sizes */
+  --logo-size: 6em;
+  --logo-padding: 1.5em;
+  --container-max: 1280px;
+  
+  /* Animation */
+  --transition-fast: 150ms ease;
+  --transition-base: 300ms ease;
+  --animation-spin: logo-spin 20s linear infinite;
+  
+  /* Shadows */
+  --shadow-glow-primary: 0 0 2em var(--color-primary-alpha);
+  --shadow-glow-react: 0 0 2em var(--color-react-alpha);
+  
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1a1a;
+    --color-surface: #242424;
+    --color-text-muted: #a0a0a0;
+  }
+}
+
+/* ==========================================================================
+   BASE & RESET
+   ========================================================================== */
+
+#root {
+  width: min(100% - var(--space-lg), var(--container-max));
+  margin-inline: auto;
+  padding: var(--space-lg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--color-bg);
+}
+
+/* ==========================================================================
+   LOGO COMPONENT
+   ========================================================================== */
+
+.logo {
+  --logo-hover-shadow: var(--shadow-glow-primary);
+  
+  height: var(--logo-size);
+  padding: var(--logo-padding);
+  will-change: filter, transform;
+  transition: 
+    filter var(--transition-base),
+    transform var(--transition-fast);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  
+  /* Performance optimization */
+  contain: layout style;
+  
+  /* Hover effects */
+  &:hover {
+    filter: drop-shadow(var(--logo-hover-shadow));
+    transform: scale(1.05);
+  }
+  
+  /* React variant */
+  &.react {
+    --logo-hover-shadow: var(--shadow-glow-react);
+  }
+  
+  /* Reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    animation: none !important;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Spinning logo - only when motion is allowed */
+@media (prefers-reduced-motion: no-preference) {
+  .logo--spinning,
+  a:nth-of-type(2) .logo {
+    animation: var(--animation-spin);
+    
+    &:hover {
+      animation-play-state: paused;
+    }
+  }
+}
+
+/* Alternative: class-based approach (recommended) */
+.animate-spin {
+  animation: var(--animation-spin);
+}
+
+/* ==========================================================================
+   CARD COMPONENT
+   ========================================================================== */
+
+.card {
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  width: 100%;
+  max-width: 600px;
+  
+  /* Stack spacing for children */
+  & > * + * {
+    margin-top: var(--space-md);
+  }
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+
+.read-the-docs {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+/* Text utilities */
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+/* Layout utilities */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.cluster {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ==========================================================================
+   ACCESSIBILITY & INTERACTION
+   ========================================================================== */
+
+/* Focus visible for keyboard navigation */
+.logo:focus-visible,
+.card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  #root {
+    padding: 0;
+  }
+  
+  .logo {
+    will-change: auto;
+    animation: none !important;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}

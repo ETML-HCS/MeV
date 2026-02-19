@@ -1,0 +1,221 @@
+import Dexie, { type Table } from 'dexie'
+import type { AppSettings, EvaluationProject, Objective, Student, StudentGrid } from '../types'
+import { DEFAULT_CORRECTION_ERROR, DEFAULT_THRESHOLD } from '../utils/constants'
+import { parseModuleInfo } from '../utils/helpers'
+
+interface SettingRow {
+  key: string
+  value: AppSettings
+}
+
+class EvaluationDatabase extends Dexie {
+  students!: Table<Student, string>
+  objectives!: Table<Objective, string>
+  grids!: Table<StudentGrid, string>
+  settings!: Table<SettingRow, string>
+  projects!: Table<EvaluationProject, string>
+
+  constructor() {
+    super('mev-evaluation-db')
+    this.version(3).stores({
+      students: 'id, lastname, firstname, login, group',
+      objectives: 'id, number, title',
+      grids: 'studentId, generatedAt',
+      settings: 'key',
+      projects: 'id, createdAt, updatedAt, moduleNumber',
+    })
+  }
+}
+
+export const db = new EvaluationDatabase()
+
+export const defaultSettings: AppSettings = {
+  classAverage: 4,
+  threshold: DEFAULT_THRESHOLD,
+  correctionError: DEFAULT_CORRECTION_ERROR,
+  moduleName: 'Module ETML',
+  testIdentifier: '',
+  testType: 'sommatif',
+  moduleDescription: 'Grille d\'évaluation',
+  correctedBy: '',
+  maxErrorRatePercent: 0,
+  showObjectives: true,
+  studentTabsLocked: false,
+  maxQuestionsToAnswer: null, // null = toutes les questions obligatoires
+  testDate: new Date().toISOString().split('T')[0], // Date du jour par défaut (YYYY-MM-DD)
+}
+
+export const getSettings = async (): Promise<AppSettings> => {
+  const found = await db.settings.get('main')
+  if (found) {
+    return { ...defaultSettings, ...found.value }
+  }
+  await db.settings.put({ key: 'main', value: defaultSettings })
+  return defaultSettings
+}
+
+export const setSettings = async (value: AppSettings) => {
+  await db.settings.put({ key: 'main', value })
+}
+
+// Projects CRUD
+export const createProject = async (name: string, description: string = ''): Promise<EvaluationProject> => {
+  const moduleInfo = parseModuleInfo(name)
+  
+  const project: EvaluationProject = {
+    id: crypto.randomUUID(),
+    name,
+    description,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    settings: { 
+      ...defaultSettings,
+      moduleName: name,
+      testIdentifier: 'EP1',
+    },
+    students: [],
+    objectives: [],
+    grids: [],
+    moduleNumber: moduleInfo.moduleNumber,
+    modulePrefix: moduleInfo.modulePrefix,
+    weightPercentage: moduleInfo.weightPercentage,
+  }
+  await db.projects.add(project)
+  return project
+}
+
+export const getProject = async (id: string): Promise<EvaluationProject | undefined> => {
+  return db.projects.get(id)
+}
+
+export const getProjects = async (): Promise<EvaluationProject[]> => {
+  return db.projects.orderBy('updatedAt').reverse().toArray()
+}
+
+export const updateProject = async (project: EvaluationProject): Promise<void> => {
+  await db.projects.put({ ...project, updatedAt: new Date() })
+}
+
+export const deleteProject = async (id: string): Promise<void> => {
+  await db.projects.delete(id)
+}
+
+export const duplicateProject = async (id: string): Promise<EvaluationProject> => {
+  const source = await db.projects.get(id)
+  if (!source) throw new Error('Projet source non trouvé')
+  
+  const copy: EvaluationProject = {
+    ...source,
+    id: crypto.randomUUID(),
+    name: `${source.name} (Copie)`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  await db.projects.add(copy)
+  return copy
+}
+
+export const createEvaluation = async (baseProjectId: string): Promise<EvaluationProject> => {
+  const baseProject = await db.projects.get(baseProjectId)
+  if (!baseProject) throw new Error('Projet source non trouvé')
+
+  // Trouver le prochain numéro d'évaluation (EP1, EP2, etc.)
+  const baseModuleNumber = baseProject.moduleNumber
+  const allProjectsWithSameModule = await db.projects
+    .where('moduleNumber')
+    .equals(baseModuleNumber || '')
+    .toArray()
+
+  // Compter les évaluations existantes pour ce module
+  const epNumbers = allProjectsWithSameModule
+    .map((p) => {
+      const match = p.settings.testIdentifier.match(/EP(\d+)/)
+      return match ? parseInt(match[1], 10) : 0
+    })
+    .filter(Boolean)
+
+  const nextEpNumber = Math.max(...epNumbers, 0) + 1
+  const nextEpId = `EP${nextEpNumber}`
+
+  const newEvaluation: EvaluationProject = {
+    ...baseProject,
+    id: crypto.randomUUID(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    students: [], // Réinitialiser les élèves
+    grids: [], // Réinitialiser les grilles
+    settings: {
+      ...baseProject.settings,
+      testIdentifier: nextEpId,
+    },
+  }
+
+  await db.projects.add(newEvaluation)
+  return newEvaluation
+}
+
+// Export/Import de la base de données complète
+export interface DatabaseExport {
+  version: number
+  exportedAt: string
+  projects: EvaluationProject[]
+  settings: AppSettings
+}
+
+export const exportDatabase = async (): Promise<string> => {
+  const projects = await db.projects.toArray()
+  const settings = await getSettings()
+  
+  const exportData: DatabaseExport = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects,
+    settings,
+  }
+  
+  return JSON.stringify(exportData, null, 2)
+}
+
+export const importDatabase = async (jsonData: string, options: { merge: boolean } = { merge: false }): Promise<void> => {
+  const data: DatabaseExport = JSON.parse(jsonData)
+  
+  if (!data.version || !data.projects) {
+    throw new Error('Format de fichier invalide')
+  }
+  
+  if (!options.merge) {
+    // Remplacer toutes les données
+    await db.projects.clear()
+  }
+  
+  // Importer les projets
+  for (const project of data.projects) {
+    if (options.merge) {
+      // En mode fusion, vérifier si le projet existe déjà
+      const existing = await db.projects.get(project.id)
+      if (!existing) {
+        await db.projects.add(project)
+      }
+    } else {
+      await db.projects.add(project)
+    }
+  }
+  
+  // Importer les paramètres uniquement si ce n'est pas une fusion
+  if (!options.merge && data.settings) {
+    await setSettings(data.settings)
+  }
+}
+
+export const downloadBackup = (jsonData: string, filename?: string) => {
+  const date = new Date().toISOString().split('T')[0]
+  const blob = new Blob([jsonData], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename || `mev-backup-${date}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}

@@ -1,0 +1,97 @@
+# Dependencies
+node_modules/
+/node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+dist-electron/
+build/
+release/
+release-new/
+out/
+
+# App specific
+*.app
+*.dmg
+*.exe
+*.msi
+*.zip
+
+# IDE & Editor
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.sln.docstates
+.vs/
+*.code-workspace
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Cache
+.eslintcache
+.stylelintcache
+.cache/
+jest_0_*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+$RECYCLE.BIN/
+
+# Electron
+electron-builder.js
+dist/
+out/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.temp/
+tmp/
+
+# SQLite databases (optional - uncomment if you want to version control)
+# *.sqlite
+# *.sqlite3
+
+# User data (Electron app data)
+# Uncomment if using Electron with user data directories
+# !app/userData/

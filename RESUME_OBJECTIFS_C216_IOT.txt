@@ -1,0 +1,6 @@
+# Résumé Objectifs C216 IoT - Module d'Évaluation
+
+O1 - Sélectionner des terminaux IoE (30%)** : Choisir topologie réseau et protocole radio selon contraintes terrain (portée, consommation, bâtiments), justifier par critères techniques mesurables.
+O2 - Configurer les terminaux IoE (40%)** : Maîtriser protocoles filaires (SPI, I2C, UART), adressage bus, conversion ADC et calculs capteurs analogiques avec validation de plausibilité.
+O3 - Garantir l'exploitation sécurisée (15%)** : Calculer circuits électriques mixtes (Ohm, Kirchhoff), comprendre encapsulation réseau (overhead, CRC, intégrité données).
+O4 - Intégrer dans le réseau (30%)** : Distinguer modes d'accès (contention/planifié), justifier codage en ligne, classifier duplex (Half/Full), expliquer domination série sur parallèle.

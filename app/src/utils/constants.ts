@@ -1,0 +1,4 @@
+export const MAX_OBJECTIVES = 10
+export const MAX_INDICATORS_PER_OBJECTIVE = 20
+export const DEFAULT_THRESHOLD = 0.6
+export const DEFAULT_CORRECTION_ERROR = 0
