@@ -351,13 +351,16 @@ export const EvaluationView = ({
       (entry) => entry.objectiveId === objectiveId && entry.indicatorId === indicatorId,
     )
 
+    // Si maxQuestionsToAnswer est défini, on ne sélectionne pas par défaut
+    const defaultSelected = maxQuestionsToAnswer === null
+
     upsertEvaluation({
       objectiveId,
       indicatorId,
       score,
       customRemark: existing?.customRemark ?? '',
       calculatedPoints: score === null ? 0 : calculateIndicatorPoints(indicator.weight * objective.weight, score),
-      selected: existing?.selected ?? true,
+      selected: existing?.selected ?? defaultSelected,
     })
   }
 
@@ -916,7 +919,7 @@ export const EvaluationView = ({
                                     existing?.score === null || existing?.score === undefined
                                       ? 0
                                       : calculateIndicatorPoints(indicator.weight * objective.weight, existing.score),
-                                  selected: existing?.selected ?? true,
+                                  selected: existing?.selected ?? (maxQuestionsToAnswer === null),
                                 })
                               }
                               placeholder="Remarque personnalisée..."
@@ -1056,7 +1059,7 @@ export const EvaluationView = ({
                               existing?.score === null || existing?.score === undefined
                                 ? 0
                                 : calculateIndicatorPoints(indicator.weight * objective.weight, existing.score),
-                            selected: existing?.selected ?? true,
+                            selected: existing?.selected ?? (maxQuestionsToAnswer === null),
                           })
                         }
                         placeholder="Remarque personnalisée..."

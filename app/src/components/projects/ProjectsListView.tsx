@@ -45,12 +45,6 @@ const parseTestIdentifier = (identifier: string) => {
   return { moduleCode, moduleType, trimestre, groupe, key }
 }
 
-const getModuleTypeFromName = (name: string) => {
-  const normalized = (name || '').trim()
-  const match = normalized.match(/\b([A-Za-z])\s*\d+/)
-  return match ? match[1].toUpperCase() : null
-}
-
 const getModuleCardColors = (moduleType: string | null) => {
   const normalizedType = moduleType?.toUpperCase() ?? null
 
@@ -61,14 +55,6 @@ const getModuleCardColors = (moduleType: string | null) => {
     return 'bg-emerald-50 border-emerald-200 hover:border-emerald-300'
   }
   return 'bg-violet-50 border-violet-200 hover:border-violet-300'
-}
-
-const resolveBadgeSource = (testIdentifier: string | undefined, projectName: string) => {
-  const fromSettings = (testIdentifier || '').trim()
-  if (!fromSettings || /^EP\d+$/i.test(fromSettings)) {
-    return projectName
-  }
-  return fromSettings
 }
 
 export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvaluationTemplates }: ProjectsListViewProps) => {
@@ -181,7 +167,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     const groups = new Map<string, Array<(typeof projects)[number]>>()
 
     for (const project of projects) {
-      const badgeSource = resolveBadgeSource(project.settings.testIdentifier, project.name)
+      const badgeSource = project.settings.testIdentifier || project.name
       const parsed = parseTestIdentifier(badgeSource)
       const existing = groups.get(parsed.key)
       if (existing) {
@@ -412,10 +398,9 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               {/* Projects Grid for this module */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {groupedProjects[moduleNumber].map((project) => {
-            const rawIdentifier = resolveBadgeSource(project.settings.testIdentifier, project.name)
+            const rawIdentifier = project.settings.testIdentifier || project.name
             const parsed = parseTestIdentifier(rawIdentifier)
-            const moduleTypeFromName = getModuleTypeFromName(project.name)
-            const effectiveModuleType = moduleTypeFromName ?? parsed.moduleType
+            const effectiveModuleType = project.modulePrefix || parsed.moduleType
             const cardColors = getModuleCardColors(effectiveModuleType)
 
             return (

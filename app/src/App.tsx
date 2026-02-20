@@ -16,6 +16,7 @@ import { EvaluationTemplatesView } from './components/evaluation-templates/Evalu
 import { useEvaluation } from './hooks/useEvaluation'
 import { useObjectives } from './hooks/useObjectives'
 import { useStudents } from './hooks/useStudents'
+import { calculateFinalGrade, calculateGridTotals } from './lib/calculations'
 import { db, getProject, getSettings, setSettings, updateProject, recordUserEvaluation } from './lib/db'
 import { generateBatchZip } from './lib/pdf-generator'
 import { useAppStore } from './stores/useAppStore'
@@ -212,6 +213,52 @@ function App() {
     settingsMutation.mutate(next)
   }
 
+  useEffect(() => {
+    const grids = gridsQuery.data ?? []
+    if (grids.length === 0 || objectives.length === 0) return
+
+    let cancelled = false
+
+    const recalcGrades = async () => {
+      const updates = []
+
+      for (const grid of grids) {
+        const totals = calculateGridTotals(objectives, grid.evaluations)
+        const nextFinalGrade = calculateFinalGrade(
+          totals.totalPoints,
+          totals.maxPoints,
+          settings.threshold,
+          settings.correctionError,
+        )
+
+        if (
+          grid.finalGrade !== nextFinalGrade ||
+          grid.totalPoints !== totals.totalPoints ||
+          grid.maxPoints !== totals.maxPoints
+        ) {
+          updates.push({
+            ...grid,
+            totalPoints: totals.totalPoints,
+            maxPoints: totals.maxPoints,
+            finalGrade: nextFinalGrade,
+          })
+        }
+      }
+
+      if (updates.length > 0 && !cancelled) {
+        await db.grids.bulkPut(updates)
+        queryClient.invalidateQueries({ queryKey: ['grids'] })
+        queryClient.invalidateQueries({ queryKey: ['grid'] })
+      }
+    }
+
+    recalcGrades()
+
+    return () => {
+      cancelled = true
+    }
+  }, [gridsQuery.data, objectives, settings.threshold, settings.correctionError, queryClient])
+
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -222,8 +269,16 @@ function App() {
   }
 
   const exportPdfBatch = async () => {
-    const zip = await generateBatchZip(students, gridsQuery.data ?? [], objectives, settings.testDate)
-    downloadBlob(zip, 'Resultats-Eleves.zip')
+    const result = await generateBatchZip(
+      students,
+      gridsQuery.data ?? [],
+      objectives,
+      settings.testIdentifier,
+      settings.moduleName,
+      settings.correctedBy,
+      settings.testDate,
+    )
+    downloadBlob(result.blob, result.fileName)
   }
 
   const exportWebJson = () => {
@@ -425,7 +480,15 @@ function App() {
       )}
 
       {activeTab === 'synthesis' && (
-        <SynthesisView objectives={objectives} students={students} grids={grids} testDate={settings.testDate} />
+        <SynthesisView 
+          objectives={objectives} 
+          students={students} 
+          grids={grids} 
+          testDate={settings.testDate}
+          testIdentifier={settings.testIdentifier}
+          moduleName={settings.moduleName}
+          correctedBy={settings.correctedBy}
+        />
       )}
 
       {activeTab === 'templates' && (

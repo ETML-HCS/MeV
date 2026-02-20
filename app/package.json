@@ -2,7 +2,7 @@
   "name": "mev-evaluation",
   "productName": "MEV - Module Évaluation",
   "private": true,
-  "version": "2.5.0",
+  "version": "2.5.2",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {

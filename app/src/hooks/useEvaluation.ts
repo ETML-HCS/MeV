@@ -41,6 +41,7 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
         moduleDescription: settings.moduleDescription,
         testDate: settings.testDate,
         testDateOverride: existingGrid?.testDateOverride, // Conserver la date alternative
+        correctedBy: settings.correctedBy, // Ajouter le correcteur depuis les settings
         generatedAt: new Date(),
         completedAt: existingGrid?.completedAt ?? null,
       }

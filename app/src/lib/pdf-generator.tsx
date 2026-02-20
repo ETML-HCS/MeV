@@ -328,6 +328,14 @@ const formatDate = (date: Date = new Date()): string => {
 const formatPoints = (points: number): string => points.toFixed(2)
 
 /**
+ * Formate un nombre en supprimant les décimales inutiles (.00 devient rien)
+ */
+const formatPointsClean = (points: number): string => {
+  const formatted = points.toFixed(2)
+  return formatted.endsWith('.00') ? formatted.slice(0, -3) : formatted
+}
+
+/**
  * Parse les balises HTML simples et retourne un tableau de composants React PDF
  * Supporte: <strong>, <b>, <em>, <i>, <sub>, <sup>
  */
@@ -367,13 +375,13 @@ const parseDescriptionItems = (description: string): string[] => {
   const normalized = description
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
-  
+
   // Diviser par les sauts de ligne et conserver les lignes non vides
   const lines = normalized
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0)
-  
+
   // Si aucun saut de ligne, retourner la description entière
   return lines.length > 0 ? lines : [description]
 }
@@ -388,6 +396,11 @@ interface ObjectiveTotal {
 }
 
 type ObjectiveTotalsMap = Map<string, ObjectiveTotal>
+
+interface PdfBatchZipResult {
+  blob: Blob
+  fileName: string
+}
 
 // ============================================================================
 // COMPOSANTS INTERNES
@@ -432,8 +445,8 @@ const DocumentHeaderFull: React.FC<{
   grid: StudentGrid
 }> = ({ student, grid }) => {
   const gradeColor = grid.finalGrade >= 4 ? COLORS.semantic.success : COLORS.semantic.danger
-  const percentageSuccess = grid.maxPoints > 0 
-    ? ((grid.totalPoints / grid.maxPoints) * 100).toFixed(1) 
+  const percentageSuccess = grid.maxPoints > 0
+    ? ((grid.totalPoints / grid.maxPoints) * 100).toFixed(1)
     : '0.0'
 
   const descriptionItems = parseDescriptionItems(grid.moduleDescription)
@@ -450,7 +463,15 @@ const DocumentHeaderFull: React.FC<{
       <Text style={styles.studentName}>
         {student.lastname.toUpperCase()} {student.firstname}
       </Text>
-      <Text style={styles.headerInfo}>Module: {grid.moduleName}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={styles.headerInfo}>Module: {grid.moduleName}</Text>
+        {grid.correctedBy && (
+          <Text style={styles.headerInfo}>
+            <Text style={{ fontWeight: 'bold' }}>Correcteur: </Text>
+            {grid.correctedBy}
+          </Text>
+        )}
+      </View>
       <Text style={styles.descriptionLabel}>Description:</Text>
       {descriptionItems.map((item, itemIdx) => {
         const itemParts = parseMarkdownText(item)
@@ -526,10 +547,11 @@ const IndicatorRow: React.FC<{
   evaluation: StudentGrid['evaluations'][number] | undefined
   isAlt: boolean
 }> = ({ indicator, objective, evaluation, isAlt }) => {
-  const maxPts = objective.weight * indicator.weight
+  const weightFull = objective.weight * indicator.weight
+  const maxPts = weightFull * 3  // Multiplier par 3 (score maximal possible)
   const earnedPts =
     evaluation?.score !== null && evaluation?.score !== undefined
-      ? calculateIndicatorPoints(maxPts, evaluation.score)
+      ? calculateIndicatorPoints(weightFull, evaluation.score)
       : 0
 
   const rowStyle = isAlt
@@ -556,7 +578,7 @@ const IndicatorRow: React.FC<{
       <ScoreDisplay score={evaluation?.score} />
 
       <Text style={styles.points}>
-        {formatPoints(earnedPts)} / {formatPoints(maxPts)}
+        {formatPointsClean(earnedPts)} / {formatPointsClean(maxPts)}
       </Text>
 
       <Text style={styles.remark}>{truncatedRemark}</Text>
@@ -572,7 +594,7 @@ const ObjectiveBlock: React.FC<{
   grid: StudentGrid
   total: ObjectiveTotal
 }> = ({ objective, grid, total }) => {
-  const percentageAchieved = total.maxPoints > 0 
+  const percentageAchieved = total.maxPoints > 0
     ? ((total.points / total.maxPoints) * 100).toFixed(0)
     : '0'
 
@@ -583,7 +605,7 @@ const ObjectiveBlock: React.FC<{
           Objectif {objective.number} - {objective.title}
         </Text>
         <Text style={styles.objectiveTotal}>
-          {formatPoints(total.points)} / {formatPoints(total.maxPoints)} pts ({percentageAchieved}%)
+          {formatPointsClean(total.points)} / {formatPointsClean(total.maxPoints)} pts ({percentageAchieved}%)
         </Text>
       </View>
 
@@ -637,11 +659,11 @@ const calculateObjectiveTotals = (
       )
       // HAUTE FIX #8: Check selected flag like calculateGridTotals does
       if (evaluation?.selected === false) continue
-      const maxPts = objective.weight * indicator.weight
+      const maxPts = objective.weight * indicator.weight * 3  // Multiplier par 3 (score maximal)
       objMaxPoints += maxPts
 
       if (evaluation?.score !== null && evaluation?.score !== undefined) {
-        objPoints += calculateIndicatorPoints(maxPts, evaluation.score)
+        objPoints += calculateIndicatorPoints(objective.weight * indicator.weight, evaluation.score)
       }
     }
 
@@ -659,18 +681,23 @@ interface StudentDocumentProps {
   student: Student
   grid: StudentGrid
   objectives: Objective[]
+  testIdentifier?: string
+  moduleName?: string
 }
 
 const StudentDocument: React.FC<StudentDocumentProps> = ({
   student,
   grid,
   objectives,
+  testIdentifier = 'evaluation',
+  moduleName = 'Module',
 }) => {
   const objectiveTotals = calculateObjectiveTotals(objectives, grid)
+  const modulePrefix = moduleName.substring(0, 4).toUpperCase()
 
   return (
-    <Document 
-      title={`Bulletin-${student.lastname}-${student.firstname}`}
+    <Document
+      title={`evaluation_${modulePrefix}_${testIdentifier}-${student.lastname}-${student.firstname}`}
       author="MEV Evaluation Module"
       subject={`Résultats pour ${student.firstname} ${student.lastname}`}
       creator="MEV Evaluation Module"
@@ -729,14 +756,18 @@ export const generateStudentPdfBlob = async (
   student: Student,
   grid: StudentGrid,
   objectives: Objective[],
+  testIdentifier?: string,
+  moduleName?: string,
+  correctedBy?: string,
   fallbackTestDate?: string
 ): Promise<Blob> => {
   // Utiliser testDateOverride si définie (pour élèves absents), sinon la date de la grille, ou la date de fallback
   const gridWithDate = {
     ...grid,
-    testDate: grid.testDateOverride || grid.testDate || fallbackTestDate
+    testDate: grid.testDateOverride || grid.testDate || fallbackTestDate,
+    correctedBy: grid.correctedBy || correctedBy,
   }
-  return pdf(<StudentDocument student={student} grid={gridWithDate} objectives={objectives} />).toBlob()
+  return pdf(<StudentDocument student={student} grid={gridWithDate} objectives={objectives} testIdentifier={testIdentifier} moduleName={moduleName} />).toBlob()
 }
 
 /**
@@ -746,11 +777,15 @@ export const generateBatchZip = async (
   students: Student[],
   grids: StudentGrid[],
   objectives: Objective[],
+  testIdentifier: string,
+  moduleName: string,
+  correctedBy?: string,
   fallbackTestDate?: string
-): Promise<Blob> => {
+): Promise<PdfBatchZipResult> => {
   const zip = new JSZip()
   const errors: Array<{ student: string; error: string }> = []
   const successes: string[] = []
+  const modulePrefix = moduleName.trim().substring(0, 4).toUpperCase() || 'MODU'
 
   // Création d'une Map pour un accès O(1) aux grilles
   const gridMap = new Map(grids.map((g) => [g.studentId, g]))
@@ -768,8 +803,16 @@ export const generateBatchZip = async (
     }
 
     try {
-      const blob = await generateStudentPdfBlob(student, grid, objectives, fallbackTestDate)
-      const fileName = `Bulletin-${student.lastname}-${student.firstname}.pdf`
+      const blob = await generateStudentPdfBlob(
+        student,
+        grid,
+        objectives,
+        testIdentifier,
+        moduleName,
+        correctedBy,
+        fallbackTestDate,
+      )
+      const fileName = `evaluation_${modulePrefix}_${testIdentifier}-${student.lastname}-${student.firstname}.pdf`
       zip.file(fileName, blob)
       successes.push(studentName)
       return { student, success: true }
@@ -796,11 +839,18 @@ export const generateBatchZip = async (
     })
   }
 
-  return zip.generateAsync({ 
-    type: 'blob',
-    compression: 'DEFLATE',
-    compressionOptions: { level: 6 }
-  })
+  // Format : module_YYYYMMDD.zip
+  const today = new Date()
+  const dateStr = today.toISOString().split('T')[0].replace(/-/g, '')
+
+  return {
+    blob: await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    }),
+    fileName: `${moduleName.replace(/\s+/g, '_')}_${dateStr}.zip`
+  }
 }
 
 // Export du composant pour les tests ou utilisation directe

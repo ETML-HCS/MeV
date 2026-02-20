@@ -336,7 +336,8 @@ export const db = {
     toArray: async (): Promise<Student[]> => {
       if (ensureAPI()) {
         try {
-          return await api.getStudents?.() ?? []
+          if (!api.getStudents) throw new Error('Method missing')
+          return await api.getStudents() ?? []
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -346,7 +347,8 @@ export const db = {
     clear: async (): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.clearStudents?.()
+          if (!api.clearStudents) throw new Error('Method missing')
+          await api.clearStudents()
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -357,7 +359,8 @@ export const db = {
     bulkAdd: async (students: Student[]): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.bulkAddStudents?.(students)
+          if (!api.bulkAddStudents) throw new Error('Method missing')
+          await api.bulkAddStudents(students)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -368,7 +371,8 @@ export const db = {
     bulkPut: async (students: Student[]): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.bulkPutStudents?.(students)
+          if (!api.bulkPutStudents) throw new Error('Method missing')
+          await api.bulkPutStudents(students)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -379,7 +383,8 @@ export const db = {
     put: async (student: Student): Promise<string> => {
       if (ensureAPI()) {
         try {
-          await api.saveStudent?.(student)
+          if (!api.saveStudent) throw new Error('Method missing')
+          await api.saveStudent(student)
           return student.id
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -391,7 +396,8 @@ export const db = {
     get: async (id: string): Promise<Student | undefined> => {
       if (ensureAPI()) {
         try {
-          return await api.getStudent?.(id)
+          if (!api.getStudent) throw new Error('Method missing')
+          return await api.getStudent(id)
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -447,7 +453,8 @@ export const db = {
     bulkAdd: async (objectives: Objective[]): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.bulkAddObjectives?.(objectives)
+          if (!api.bulkAddObjectives) throw new Error('Method missing')
+          await api.bulkAddObjectives(objectives)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -458,7 +465,8 @@ export const db = {
     bulkPut: async (objectives: Objective[]): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.bulkPutObjectives?.(objectives)
+          if (!api.bulkPutObjectives) throw new Error('Method missing')
+          await api.bulkPutObjectives(objectives)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -469,7 +477,8 @@ export const db = {
     put: async (objective: Objective): Promise<string> => {
       if (ensureAPI()) {
         try {
-          await api.saveObjective?.(objective)
+          if (!api.saveObjective) throw new Error('Method missing')
+          await api.saveObjective(objective)
           return objective.id
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -481,7 +490,8 @@ export const db = {
     get: async (id: string): Promise<Objective | undefined> => {
       if (ensureAPI()) {
         try {
-          return await api.getObjective?.(id)
+          if (!api.getObjective) throw new Error('Method missing')
+          return await api.getObjective(id)
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -491,7 +501,8 @@ export const db = {
     delete: async (id: string): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.deleteObjective?.(id)
+          if (!api.deleteObjective) throw new Error('Method missing')
+          await api.deleteObjective(id)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -503,7 +514,8 @@ export const db = {
       toArray: async (): Promise<Objective[]> => {
         if (ensureAPI()) {
           try {
-            return await api.getObjectivesSorted?.(field) ?? []
+            if (!api.getObjectivesSorted) throw new Error('Method missing')
+            return await api.getObjectivesSorted(field) ?? []
           } catch (e) {
             console.error('Electron API error, falling back to Dexie:', e)
           }
@@ -516,7 +528,8 @@ export const db = {
     toArray: async (): Promise<StudentGrid[]> => {
       if (ensureAPI()) {
         try {
-          return await api.getGrids?.() ?? []
+          if (!api.getGrids) throw new Error('Method missing')
+          return await api.getGrids() ?? []
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -526,7 +539,8 @@ export const db = {
     clear: async (): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.clearGrids?.()
+          if (!api.clearGrids) throw new Error('Method missing')
+          await api.clearGrids()
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -537,7 +551,8 @@ export const db = {
     bulkAdd: async (grids: StudentGrid[]): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.bulkAddGrids?.(grids)
+          if (!api.bulkAddGrids) throw new Error('Method missing')
+          await api.bulkAddGrids(grids)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -548,7 +563,8 @@ export const db = {
     bulkPut: async (grids: StudentGrid[]): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.bulkPutGrids?.(grids)
+          if (!api.bulkPutGrids) throw new Error('Method missing')
+          await api.bulkPutGrids(grids)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -559,8 +575,9 @@ export const db = {
     put: async (grid: StudentGrid, projectId?: string): Promise<string> => {
       if (ensureAPI()) {
         try {
+          if (!api.saveGrid) throw new Error('Method missing')
           // Passer le projectId pour que la sauvegarde soit persistée en DB
-          await api.saveGrid?.(grid, projectId)
+          await api.saveGrid(grid, projectId)
           return grid.studentId
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -572,7 +589,8 @@ export const db = {
     get: async (id: string): Promise<StudentGrid | undefined> => {
       if (ensureAPI()) {
         try {
-          return await api.getGrid?.(id)
+          if (!api.getGrid) throw new Error('Method missing')
+          return await api.getGrid(id)
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -582,7 +600,8 @@ export const db = {
     delete: async (id: string): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.deleteGrid?.(id)
+          if (!api.deleteGrid) throw new Error('Method missing')
+          await api.deleteGrid(id)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -596,7 +615,8 @@ export const db = {
     get: async (key: string): Promise<{ key: string; value: AppSettings } | undefined> => {
       if (ensureAPI()) {
         try {
-          const settings = await api.getSettings?.()
+          if (!api.getSettings) throw new Error('Method missing')
+          const settings = await api.getSettings()
           if (settings) {
             return { key: 'main', value: settings }
           }
@@ -609,7 +629,8 @@ export const db = {
     put: async (setting: { key: string; value: AppSettings }): Promise<string> => {
       if (ensureAPI()) {
         try {
-          await api.setSettings?.(setting.value)
+          if (!api.setSettings) throw new Error('Method missing')
+          await api.setSettings(setting.value)
           return setting.key
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -623,7 +644,8 @@ export const db = {
     toArray: async (): Promise<EvaluationProject[]> => {
       if (ensureAPI()) {
         try {
-          return await api.getProjects?.() ?? []
+          if (!api.getProjects) throw new Error('Method missing')
+          return await api.getProjects() ?? []
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -633,7 +655,8 @@ export const db = {
     add: async (project: EvaluationProject): Promise<string> => {
       if (ensureAPI()) {
         try {
-          await api.createProject?.(project.name, project.description)
+          if (!api.createProject) throw new Error('Method missing')
+          await api.createProject(project.name, project.description)
           return project.id
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -645,7 +668,8 @@ export const db = {
     get: async (id: string): Promise<EvaluationProject | undefined> => {
       if (ensureAPI()) {
         try {
-          return await api.getProject?.(id)
+          if (!api.getProject) throw new Error('Method missing')
+          return await api.getProject(id)
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
         }
@@ -655,7 +679,8 @@ export const db = {
     put: async (project: EvaluationProject): Promise<string> => {
       if (ensureAPI()) {
         try {
-          await api.updateProject?.(project)
+          if (!api.updateProject) throw new Error('Method missing')
+          await api.updateProject(project)
           return project.id
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -667,7 +692,8 @@ export const db = {
     delete: async (id: string): Promise<void> => {
       if (ensureAPI()) {
         try {
-          await api.deleteProject?.(id)
+          if (!api.deleteProject) throw new Error('Method missing')
+          await api.deleteProject(id)
           return
         } catch (e) {
           console.error('Electron API error, falling back to Dexie:', e)
@@ -680,7 +706,8 @@ export const db = {
         toArray: async (): Promise<EvaluationProject[]> => {
           if (ensureAPI()) {
             try {
-              return await api.getProjectsWhere?.(field, value) ?? []
+              if (!api.getProjectsWhere) throw new Error('Method missing')
+              return await api.getProjectsWhere(field, value) ?? []
             } catch (e) {
               console.error('Electron API error, falling back to Dexie:', e)
             }
@@ -694,7 +721,8 @@ export const db = {
         toArray: async (): Promise<EvaluationProject[]> => {
           if (ensureAPI()) {
             try {
-              return await api.getProjectsSorted?.(field, true) ?? []
+              if (!api.getProjectsSorted) throw new Error('Method missing')
+              return await api.getProjectsSorted(field, true) ?? []
             } catch (e) {
               console.error('Electron API error, falling back to Dexie:', e)
             }

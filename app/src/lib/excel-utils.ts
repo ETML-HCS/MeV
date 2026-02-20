@@ -37,7 +37,23 @@ const readLoginCandidates = (workbook: XLSX.WorkBook): LoginRecord[] => {
 const readStudentsFromMainSheet = (workbook: XLSX.WorkBook): Pick<Student, 'firstname' | 'lastname'>[] => {
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
   const rows = parseSheetRows(firstSheet)
-  const selected = rows.slice(14, 120)
+  
+  // Find the header row that contains "Nom" and "Prénom"
+  let headerRowIndex = -1
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    const hasNom = row.some(cell => cell.toLowerCase().includes('nom'))
+    const hasPrenom = row.some(cell => cell.toLowerCase().includes('prénom') || cell.toLowerCase().includes('prenom'))
+    if (hasNom && hasPrenom) {
+      headerRowIndex = i
+      break
+    }
+  }
+
+  // If no header found, fallback to row 14
+  const startIndex = headerRowIndex !== -1 ? headerRowIndex + 1 : 14
+  const selected = rows.slice(startIndex)
+  
   return selected
     .filter((row) => row[0] || row[1])
     .map((row) => ({ lastname: row[0] ?? '', firstname: row[1] ?? '' }))

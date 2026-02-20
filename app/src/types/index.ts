@@ -81,6 +81,7 @@ export interface StudentGrid {
   testDateOverride?: string // Date alternative si l'élève était absent (format ISO YYYY-MM-DD)
   generatedAt: Date
   completedAt: Date | null // Date de finalisation de l'évaluation
+  correctedBy?: string // Nom du correcteur - optionnel pour rétrocompatibilité
 }
 
 export interface AppSettings {

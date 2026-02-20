@@ -162,6 +162,10 @@ export const DashboardView = ({
       effectiveMaxPoints = limitedMaxPoints
    }
    
+   // Si les questions ont des poids différents et qu'il y a une limite, le maxPoints est variable
+   const hasVariableWeights = objectives.some(o => o.indicators.some(i => i.weight !== objectives[0].indicators[0].weight)) || objectives.some(o => o.weight !== objectives[0].weight)
+   const isMaxPointsVariable = settings.maxQuestionsToAnswer !== null && settings.maxQuestionsToAnswer < totalQuestions && hasVariableWeights
+
    const minPointsFor4 = effectiveMaxPoints * settings.threshold
    const filledStudents = studentInputs.filter(s => s.lastname.trim() || s.firstname.trim()).length
    const displayedStudentInputs = isStudentInputClosed
@@ -332,10 +336,12 @@ export const DashboardView = ({
                <h3 className="text-xs font-semibold tracking-wider text-white uppercase">Configuration du test</h3>
                <div className="inline-flex w-fit items-center gap-2 rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] text-slate-200">
                   <span>Pts 4.0 :</span>
-                  <span className="text-sm font-bold text-white">{minPointsFor4.toFixed(0)}</span>
+                  <span className="text-sm font-bold text-white">
+                     {isMaxPointsVariable ? 'Variable' : minPointsFor4.toFixed(0)}
+                  </span>
                   <span>
-                     / {effectiveMaxPoints.toFixed(0)}
-                     {settings.maxQuestionsToAnswer !== null && effectiveMaxPoints !== gridMaxPoints && (
+                     / {isMaxPointsVariable ? 'Variable' : effectiveMaxPoints.toFixed(0)}
+                     {settings.maxQuestionsToAnswer !== null && effectiveMaxPoints !== gridMaxPoints && !isMaxPointsVariable && (
                         <span className="ml-1 opacity-60">({gridMaxPoints.toFixed(0)})</span>
                      )}
                   </span>

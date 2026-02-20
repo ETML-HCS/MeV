@@ -9,6 +9,9 @@ interface SynthesisViewProps {
   students: Student[]
   grids: StudentGrid[]
   testDate?: string
+  testIdentifier?: string
+  moduleName?: string
+  correctedBy?: string
 }
 
 const colorForScore = (score: number | null | undefined) => {
@@ -29,7 +32,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url)
 }
 
-export const SynthesisView = ({ objectives, students, grids, testDate }: SynthesisViewProps) => {
+export const SynthesisView = ({ objectives, students, grids, testDate, testIdentifier = 'C216', moduleName = 'Module', correctedBy = '' }: SynthesisViewProps) => {
   const [isExporting, setIsExporting] = useState(false)
   const [openMenuStudentId, setOpenMenuStudentId] = useState<string | null>(null)
 
@@ -58,8 +61,8 @@ export const SynthesisView = ({ objectives, students, grids, testDate }: Synthes
     setIsExporting(true)
     try {
       // HAUTE FIX #20: Use only evaluated students to match table display
-      const zip = await generateBatchZip(evaluatedStudents, grids, objectives, testDate)
-      downloadBlob(zip, 'Resultats-Eleves.zip')
+      const result = await generateBatchZip(evaluatedStudents, grids, objectives, testIdentifier, moduleName, correctedBy, testDate)
+      downloadBlob(result.blob, result.fileName)
     } finally {
       setIsExporting(false)
     }
@@ -70,7 +73,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate }: Synthes
     if (!grid) return
 
     try {
-      const blob = await generateStudentPdfBlob(student, grid, objectives, testDate)
+      const blob = await generateStudentPdfBlob(student, grid, objectives, testIdentifier, moduleName, correctedBy, testDate)
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
       // L'URL sera révoquée quand l'onglet sera fermé
