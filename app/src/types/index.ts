@@ -45,6 +45,9 @@ export interface ModuleTemplate {
   id: string
   name: string // Ex: "DEP-C216"
   description: string
+  moduleNumber?: string | null // Ex: "164"
+  modulePrefix?: 'I' | 'C' | null // Ex: "I"
+  testIdentifier?: string // Ex: "EP1"
   objectives: ObjectiveTemplate[]
   createdAt: Date
   updatedAt: Date

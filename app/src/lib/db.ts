@@ -39,13 +39,13 @@ class EvaluationDatabase extends Dexie {
 
   constructor() {
     super('mev-evaluation-db')
-    this.version(6).stores({
+    this.version(7).stores({
       students: 'id, lastname, firstname, login, group',
       objectives: 'id, number, title',
       grids: 'studentId, generatedAt',
       settings: 'key',
       projects: 'id, createdAt, updatedAt, moduleNumber',
-      moduleTemplates: 'id, name, createdAt, updatedAt',
+      moduleTemplates: 'id, name, createdAt, updatedAt, [modulePrefix+moduleNumber+testIdentifier]',
       evaluationTemplates: 'id, name, createdAt, updatedAt',
     })
   }
@@ -206,47 +206,79 @@ export const duplicateProject = async (id: string): Promise<EvaluationProject> =
 }
 
 export const createEvaluation = async (baseProjectId: string): Promise<EvaluationProject> => {
+  let newEvaluation: EvaluationProject | null = null
+
   if (ensureAPI()) {
     try {
-      return await api.createEvaluation(baseProjectId)
+      newEvaluation = await api.createEvaluation(baseProjectId)
     } catch (e) {
       console.error('Electron API error, falling back to Dexie:', e)
     }
   }
   
-  const baseProject = await dexieDb.projects.get(baseProjectId)
-  if (!baseProject) throw new Error('Base project not found')
+  if (!newEvaluation) {
+    const baseProject = await dexieDb.projects.get(baseProjectId)
+    if (!baseProject) throw new Error('Base project not found')
 
-  const sameModuleProjects = await dexieDb.projects
-    .where('moduleNumber')
-    .equals(baseProject.moduleNumber || '')
-    .toArray()
+    const sameModuleProjects = await dexieDb.projects
+      .where('moduleNumber')
+      .equals(baseProject.moduleNumber || '')
+      .toArray()
 
-  const epNumbers = sameModuleProjects
-    .map((p) => {
-      const match = p.settings.testIdentifier.match(/EP(\d+)/)
-      return match ? parseInt(match[1], 10) : 0
-    })
-    .filter(Boolean)
+    const epNumbers = sameModuleProjects
+      .map((p) => {
+        const match = p.settings.testIdentifier.match(/EP(\d+)/)
+        return match ? parseInt(match[1], 10) : 0
+      })
+      .filter(Boolean)
 
-  const nextEpNumber = Math.max(...epNumbers, 0) + 1
-  const nextEpId = `EP${nextEpNumber}`
+    const nextEpNumber = Math.max(...epNumbers, 0) + 1
+    const nextEpId = `EP${nextEpNumber}`
 
-  const newEvaluation: EvaluationProject = {
-    ...baseProject,
-    id: crypto.randomUUID(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    students: baseProject.students,
-    objectives: [],
-    grids: [],
-    settings: {
-      ...baseProject.settings,
-      testIdentifier: nextEpId,
-    },
+    newEvaluation = {
+      ...baseProject,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      students: baseProject.students,
+      objectives: [],
+      grids: [],
+      settings: {
+        ...baseProject.settings,
+        testIdentifier: nextEpId,
+      },
+    }
   }
 
-  await dexieDb.projects.add(newEvaluation)
+  // Chercher un squelette correspondant (toujours dans Dexie car les templates n'y sont que là pour l'instant)
+  if (newEvaluation.moduleNumber && newEvaluation.modulePrefix) {
+    const template = await dexieDb.moduleTemplates
+      .where('[modulePrefix+moduleNumber+testIdentifier]')
+      .equals([newEvaluation.modulePrefix, newEvaluation.moduleNumber, newEvaluation.settings.testIdentifier])
+      .first()
+
+    if (template) {
+      newEvaluation.objectives = template.objectives.map(obj => ({
+        id: crypto.randomUUID(),
+        number: obj.number,
+        title: obj.title,
+        description: obj.description,
+        weight: obj.weight,
+        indicators: []
+      }))
+    }
+  }
+
+  if (ensureAPI()) {
+    try {
+      await api.updateProject(newEvaluation)
+    } catch (e) {
+      console.error('Electron API error, falling back to Dexie:', e)
+    }
+  } else {
+    await dexieDb.projects.add(newEvaluation)
+  }
+
   return newEvaluation
 }
 

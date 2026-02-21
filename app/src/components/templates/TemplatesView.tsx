@@ -16,6 +16,9 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    moduleNumber: '',
+    modulePrefix: '' as 'I' | 'C' | '',
+    testIdentifier: '',
     objectives: [] as ObjectiveTemplate[],
   })
 
@@ -68,7 +71,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
   })
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', objectives: [] })
+    setFormData({ name: '', description: '', moduleNumber: '', modulePrefix: '', testIdentifier: '', objectives: [] })
     setIsCreating(false)
     setEditingTemplate(null)
     setQuickEntryMode(false)
@@ -147,12 +150,18 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
         ...editingTemplate,
         name: formData.name,
         description: formData.description,
+        moduleNumber: formData.moduleNumber || null,
+        modulePrefix: formData.modulePrefix || null,
+        testIdentifier: formData.testIdentifier || undefined,
         objectives: formData.objectives,
       })
     } else {
       createMutation.mutate({
         name: formData.name,
         description: formData.description,
+        moduleNumber: formData.moduleNumber || null,
+        modulePrefix: formData.modulePrefix || null,
+        testIdentifier: formData.testIdentifier || undefined,
         objectives: formData.objectives,
       })
     }
@@ -163,6 +172,9 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
     setFormData({
       name: template.name,
       description: template.description,
+      moduleNumber: template.moduleNumber || '',
+      modulePrefix: template.modulePrefix || '',
+      testIdentifier: template.testIdentifier || '',
       objectives: template.objectives,
     })
     setIsCreating(true)
@@ -222,7 +234,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
             {/* Nom du module */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Nom du module (ex: DEP-C216)
+                Nom du squelette (ex: DEP-C216)
               </label>
               <input
                 type="text"
@@ -232,6 +244,51 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
             </div>
+
+            {/* Association Module / EP */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Type de module
+                </label>
+                <select
+                  value={formData.modulePrefix}
+                  onChange={(e) => setFormData({ ...formData, modulePrefix: e.target.value as 'I' | 'C' | '' })}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
+                >
+                  <option value="">Aucun</option>
+                  <option value="I">I (Informatique)</option>
+                  <option value="C">C (Culture générale)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Numéro du module
+                </label>
+                <input
+                  type="text"
+                  value={formData.moduleNumber}
+                  onChange={(e) => setFormData({ ...formData, moduleNumber: e.target.value })}
+                  placeholder="ex: 164"
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Identifiant de l'EP
+                </label>
+                <input
+                  type="text"
+                  value={formData.testIdentifier}
+                  onChange={(e) => setFormData({ ...formData, testIdentifier: e.target.value })}
+                  placeholder="ex: EP1"
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 -mt-2">
+              Si ces 3 champs sont remplis, ce squelette sera automatiquement utilisé lors de la création d'une nouvelle évaluation pour ce module.
+            </p>
 
             {/* Description */}
             <div>
@@ -395,6 +452,16 @@ Titre objectif 3"
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-bold text-slate-900 text-lg">{template.name}</h3>
+                  {template.moduleNumber && template.modulePrefix && template.testIdentifier && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
+                        {template.modulePrefix}{template.moduleNumber}
+                      </span>
+                      <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[10px] font-bold">
+                        {template.testIdentifier}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-xs text-slate-500 mt-1">
                     {template.objectives.length} objectif{template.objectives.length > 1 ? 's' : ''}
                   </p>

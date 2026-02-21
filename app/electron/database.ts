@@ -425,6 +425,12 @@ export function createEvaluation(baseProjectId: string): EvaluationProject {
   const nextEpNumber = Math.max(...epNumbers, 0) + 1
   const nextEpId = `EP${nextEpNumber}`
 
+  // Note: Les squelettes (ModuleTemplates) sont gérés uniquement côté client (Dexie)
+  // pour le moment. L'injection automatique des objectifs se fait dans db.ts
+  // Si on est dans Electron, on crée l'EP sans objectifs, et le client devra
+  // potentiellement les injecter après coup s'il trouve un squelette.
+  // Pour garder la cohérence, on laisse le tableau vide ici.
+
   const newEvaluation: EvaluationProject = {
     ...baseProject,
     id: crypto.randomUUID(),
