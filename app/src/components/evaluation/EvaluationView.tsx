@@ -64,6 +64,7 @@ export const EvaluationView = ({
   const [collapsedObjectiveIds, setCollapsedObjectiveIds] = useState<string[]>([])
   const [hasAlternateDate, setHasAlternateDate] = useState(false)
   const [alternateDate, setAlternateDate] = useState('')
+  const [showDateInput, setShowDateInput] = useState(false)
   const [viewMode, setViewMode] = useState<'objectives' | 'questions'>(() => {
     if (typeof window === 'undefined') return 'objectives'
     const stored = window.localStorage.getItem('mev-evaluation-view-mode')
@@ -103,9 +104,11 @@ export const EvaluationView = ({
     if (currentGrid?.testDateOverride !== undefined) {
       setHasAlternateDate(true)
       setAlternateDate(currentGrid.testDateOverride || '')
+      setShowDateInput(!!currentGrid.testDateOverride)
     } else {
       setHasAlternateDate(false)
       setAlternateDate('')
+      setShowDateInput(false)
     }
   }, [currentGrid])
 
@@ -333,6 +336,7 @@ export const EvaluationView = ({
     setHasAlternateDate(checked)
     if (!checked) {
       setAlternateDate('')
+      setShowDateInput(false)
       onUpdateTestDateOverride(undefined)
     } else {
       onUpdateTestDateOverride('')
@@ -500,14 +504,39 @@ export const EvaluationView = ({
                 />
                 <span className="text-xs text-slate-500">Absent</span>
               </label>
-              {hasAlternateDate && (
-                <input
-                  type="date"
-                  value={alternateDate}
-                  onChange={(e) => handleAlternateDateChange(e.target.value)}
+              {hasAlternateDate && !showDateInput && (
+                <button
+                  onClick={() => setShowDateInput(true)}
                   disabled={readOnly}
-                  className="text-xs border border-slate-300 rounded px-2 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none disabled:opacity-50"
-                />
+                  className="text-[10px] text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors disabled:opacity-50"
+                >
+                  + Date de rattrapage
+                </button>
+              )}
+              {hasAlternateDate && showDateInput && (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="date"
+                    value={alternateDate}
+                    onChange={(e) => handleAlternateDateChange(e.target.value)}
+                    disabled={readOnly}
+                    className="text-xs border border-slate-300 rounded px-2 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none disabled:opacity-50"
+                  />
+                  <button
+                    onClick={() => {
+                      setShowDateInput(false)
+                      setAlternateDate('')
+                      onUpdateTestDateOverride('')
+                    }}
+                    disabled={readOnly}
+                    className="text-slate-400 hover:text-rose-500 p-1 rounded hover:bg-rose-50 transition-colors disabled:opacity-50"
+                    title="Retirer la date"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
           )}
