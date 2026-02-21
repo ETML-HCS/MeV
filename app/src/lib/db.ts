@@ -206,8 +206,48 @@ export const duplicateProject = async (id: string): Promise<EvaluationProject> =
 }
 
 export const createEvaluation = async (baseProjectId: string): Promise<EvaluationProject> => {
-  ensureAPI()
-  return await api.createEvaluation(baseProjectId)
+  if (ensureAPI()) {
+    try {
+      return await api.createEvaluation(baseProjectId)
+    } catch (e) {
+      console.error('Electron API error, falling back to Dexie:', e)
+    }
+  }
+  
+  const baseProject = await dexieDb.projects.get(baseProjectId)
+  if (!baseProject) throw new Error('Base project not found')
+
+  const sameModuleProjects = await dexieDb.projects
+    .where('moduleNumber')
+    .equals(baseProject.moduleNumber || '')
+    .toArray()
+
+  const epNumbers = sameModuleProjects
+    .map((p) => {
+      const match = p.settings.testIdentifier.match(/EP(\d+)/)
+      return match ? parseInt(match[1], 10) : 0
+    })
+    .filter(Boolean)
+
+  const nextEpNumber = Math.max(...epNumbers, 0) + 1
+  const nextEpId = `EP${nextEpNumber}`
+
+  const newEvaluation: EvaluationProject = {
+    ...baseProject,
+    id: crypto.randomUUID(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    students: baseProject.students,
+    objectives: [],
+    grids: [],
+    settings: {
+      ...baseProject.settings,
+      testIdentifier: nextEpId,
+    },
+  }
+
+  await dexieDb.projects.add(newEvaluation)
+  return newEvaluation
 }
 
 // Export/Import

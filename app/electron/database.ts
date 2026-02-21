@@ -430,7 +430,8 @@ export function createEvaluation(baseProjectId: string): EvaluationProject {
     id: crypto.randomUUID(),
     createdAt: new Date(),
     updatedAt: new Date(),
-    students: [],
+    students: baseProject.students,
+    objectives: [],
     grids: [],
     settings: {
       ...baseProject.settings,
