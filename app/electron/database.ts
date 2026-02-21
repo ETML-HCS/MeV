@@ -518,6 +518,11 @@ export function importDatabase(jsonData: string, merge: boolean = false): void {
   try {
     const data = JSON.parse(jsonData)
     
+    // Gérer le cas où on importe un seul projet (exportProject)
+    if (data.project && !data.projects) {
+      data.projects = [data.project]
+    }
+    
     // Valider que les données contiennent au moins des projets
     if (!data.projects || !Array.isArray(data.projects) || data.projects.length === 0) {
       throw new Error('Fichier de sauvegarde invalide ou vide - aucun projet trouvé')

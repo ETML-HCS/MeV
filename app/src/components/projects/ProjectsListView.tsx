@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createProject, deleteProject, duplicateProject, getProjects, updateProject, createEvaluation, downloadProjectBackup, downloadAllProjectsBackup, db } from '../../lib/db'
+import { createProject, deleteProject, duplicateProject, getProjects, updateProject, createEvaluation, downloadProjectBackup, downloadAllProjectsBackup, importDatabase, db } from '../../lib/db'
 import { parseProjectName, getModuleCardColors } from '../../utils/helpers'
 import { useConfirm } from '../../hooks/useConfirm'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
@@ -18,7 +18,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [editingModuleName, setEditingModuleName] = useState<string | null>(null)
   const [editingProjectName, setEditingProjectName] = useState('')
-  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting'>('idle')
+  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'importing'>('idle')
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [confirm, confirmDialogProps] = useConfirm()
@@ -182,6 +182,42 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     exportAllProjectsMutation.mutate()
   }
 
+  const handleImportBackup = async () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      try {
+        setExportStatus('importing')
+        const text = await file.text()
+        
+        const ok = await confirm({
+          title: 'Restaurer les données',
+          message: 'ATTENTION : Cette action remplacera toutes vos données actuelles par celles du fichier de sauvegarde.\n\nVoulez-vous continuer ?',
+          confirmLabel: 'Restaurer',
+          variant: 'danger',
+        })
+        
+        if (ok) {
+          await importDatabase(text, { merge: false })
+          queryClient.invalidateQueries({ queryKey: ['projects'] })
+          // Recharger la page pour s'assurer que tout l'état est propre
+          window.location.reload()
+        } else {
+          setExportStatus('idle')
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'import:', error)
+        alert(`Erreur lors de l'import : ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+        setExportStatus('idle')
+      }
+    }
+    input.click()
+  }
+
   // Grouper les projets par nom (qui représente le module/classe)
   const modulesByName = useMemo(() => {
     const map = new Map<string, {
@@ -302,7 +338,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               </button>
               <button
                 onClick={handleExportAllProjects}
-                disabled={exportStatus === 'exporting' || projects.length === 0}
+                disabled={exportStatus !== 'idle' || projects.length === 0}
                 title="Exporte tous les MEV dans une archive ZIP"
                 className="px-3 py-2 bg-white/10 border border-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
               >
@@ -310,6 +346,17 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 {exportStatus === 'exporting' ? '...' : 'Tout sauver'}
+              </button>
+              <button
+                onClick={handleImportBackup}
+                disabled={exportStatus !== 'idle'}
+                title="Restaurer une sauvegarde JSON"
+                className="px-3 py-2 bg-white/10 border border-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {exportStatus === 'importing' ? '...' : 'Restaurer'}
               </button>
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}

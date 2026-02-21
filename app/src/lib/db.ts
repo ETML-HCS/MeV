@@ -293,6 +293,12 @@ export const importDatabase = async (
   }
   // Fallback browser : importer dans Dexie
   const data = JSON.parse(jsonData)
+  
+  // Gérer le cas où on importe un seul projet (exportProject)
+  if (data.project && !data.projects) {
+    data.projects = [data.project]
+  }
+  
   if (!data.projects || !Array.isArray(data.projects)) {
     throw new Error('Fichier de sauvegarde invalide')
   }

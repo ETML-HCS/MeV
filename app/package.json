@@ -1,8 +1,8 @@
 {
   "name": "mev-evaluation",
-  "productName": "MEV - Module Évaluation",
+  "productName": "MEV",
   "private": true,
-  "version": "2.5.2",
+  "version": "2.6.0",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -74,7 +74,7 @@
   },
   "build": {
     "appId": "ch.etml.mev-evaluation",
-    "productName": "MEV - Module Évaluation",
+    "productName": "MEV",
     "directories": {
       "output": "dist/release",
       "buildResources": "build"
