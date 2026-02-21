@@ -8,51 +8,49 @@ interface ProjectsListViewProps {
   onOpenEvaluationTemplates: () => void
 }
 
-// Parse prioritaire: typeModule_idModule_numTrimestre_groupeClasse
-const parseTestIdentifier = (identifier: string) => {
-  const normalized = (identifier || '').trim()
-  const parts = normalized.split('_').map((part) => part.trim()).filter(Boolean)
+// Parse prioritaire: IdentificationModule-TrimestreAcademique-GroupeLabo
+const parseProjectName = (name: string) => {
+  const normalized = (name || '').trim()
+  const parts = normalized.split('-').map(p => p.trim())
+  
+  let identificationModule = parts[0] || ''
+  let trimestreAcademique = parts[1] || ''
+  let groupeLabo = parts.slice(2).join('-') || ''
 
-  if (parts.length >= 4) {
-    const rawType = parts[0].toUpperCase()
-    const moduleType = /^[A-Z]$/.test(rawType) ? rawType : null
-    const moduleId = parts[1] || null
-    const trimestreRaw = parts[2] || null
-    const groupeRaw = parts.slice(3).join('_') || null
-
-    const moduleCode = moduleType && moduleId ? `${moduleType}${moduleId}` : (moduleId || normalized)
-    const trimestre = trimestreRaw ? `T${trimestreRaw}` : null
-    const groupe = groupeRaw ? `Grp ${groupeRaw.toUpperCase()}` : null
-    const key = `${moduleType ?? 'X'}_${moduleId ?? 'NA'}_${trimestreRaw ?? 'NA'}_${groupeRaw ?? 'NA'}`
-
-    return { moduleCode, moduleType, trimestre, groupe, key }
+  let groupType = 'Autres'
+  let groupWeight = 4
+  
+  const upperId = identificationModule.toUpperCase()
+  if (upperId.startsWith('C')) {
+    groupType = 'C'
+    groupWeight = 1
+  } else if (upperId.startsWith('I')) {
+    groupType = 'I'
+    groupWeight = 2
+  } else if (/^\d+$/.test(upperId)) {
+    groupType = 'Numérique'
+    groupWeight = 3
   }
 
-  // Fallback legacy format (ex: C216-ep1-t3-grp1c)
-  const moduleCodeMatch = normalized.match(/^([A-Z]\d+)/i)
-  const moduleCode = moduleCodeMatch ? moduleCodeMatch[1].toUpperCase() : normalized
-
-  const moduleTypeMatch = normalized.match(/^([A-Z])/i)
-  const moduleType = moduleTypeMatch ? moduleTypeMatch[1].toUpperCase() : null
-
-  const trimestreMatch = normalized.match(/(?:-t|_t)(\d+)/i)
-  const trimestre = trimestreMatch ? `T${trimestreMatch[1]}` : null
-
-  const groupeMatch = normalized.match(/grp\s*([\da-z]+)/i)
-  const groupe = groupeMatch ? `Grp ${groupeMatch[1].toUpperCase()}` : null
-
-  const key = `${moduleCode}_${trimestre ?? 'NA'}_${groupe ?? 'NA'}`
-  return { moduleCode, moduleType, trimestre, groupe, key }
+  return {
+    identificationModule,
+    trimestreAcademique,
+    groupeLabo,
+    groupType,
+    groupWeight,
+    originalName: name
+  }
 }
 
-const getModuleCardColors = (moduleType: string | null) => {
-  const normalizedType = moduleType?.toUpperCase() ?? null
-
-  if (normalizedType === 'C') {
+const getModuleCardColors = (groupType: string) => {
+  if (groupType === 'C') {
     return 'bg-blue-50 border-blue-200 hover:border-blue-300'
   }
-  if (normalizedType === 'I') {
+  if (groupType === 'I') {
     return 'bg-emerald-50 border-emerald-200 hover:border-emerald-300'
+  }
+  if (groupType === 'Numérique') {
+    return 'bg-amber-50 border-amber-200 hover:border-amber-300'
   }
   return 'bg-violet-50 border-violet-200 hover:border-violet-300'
 }
@@ -167,13 +165,12 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     const groups = new Map<string, Array<(typeof projects)[number]>>()
 
     for (const project of projects) {
-      const badgeSource = project.settings.testIdentifier || project.name
-      const parsed = parseTestIdentifier(badgeSource)
-      const existing = groups.get(parsed.key)
+      const key = project.name
+      const existing = groups.get(key)
       if (existing) {
         existing.push(project)
       } else {
-        groups.set(parsed.key, [project])
+        groups.set(key, [project])
       }
     }
 
@@ -239,21 +236,26 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     exportAllProjectsMutation.mutate()
   }
 
-  // Grouper les projets par numéro de module
+  // Grouper les projets par type de module
   const groupedProjects = projects.reduce((acc, project) => {
-    const moduleNumber = project.moduleNumber || 'Autres'
-    if (!acc[moduleNumber]) {
-      acc[moduleNumber] = []
+    const parsed = parseProjectName(project.name)
+    const groupType = parsed.groupType
+    if (!acc[groupType]) {
+      acc[groupType] = []
     }
-    acc[moduleNumber].push(project)
+    acc[groupType].push({ ...project, parsed })
     return acc
-  }, {} as Record<string, typeof projects>)
+  }, {} as Record<string, Array<typeof projects[number] & { parsed: ReturnType<typeof parseProjectName> }>>)
 
-  // Trier les groupes : modules numériques d'abord (en ordre décroissant), puis "Autres"
-  const sortedModules = Object.keys(groupedProjects).sort((a, b) => {
-    if (a === 'Autres') return 1
-    if (b === 'Autres') return -1
-    return Number(b) - Number(a)
+  // Trier les groupes : C, I, Numérique, Autres
+  const groupOrder = { 'C': 1, 'I': 2, 'Numérique': 3, 'Autres': 4 }
+  const sortedGroups = Object.keys(groupedProjects).sort((a, b) => {
+    return groupOrder[a as keyof typeof groupOrder] - groupOrder[b as keyof typeof groupOrder]
+  })
+
+  // Trier les projets à l'intérieur de chaque groupe par ordre alphabétique
+  sortedGroups.forEach(group => {
+    groupedProjects[group].sort((a, b) => a.name.localeCompare(b.name))
   })
 
   return (
@@ -382,26 +384,27 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
         </div>
       ) : (
         <div className="space-y-6">
-          {sortedModules.map((moduleNumber) => (
-            <div key={moduleNumber} className="space-y-3">
+          {sortedGroups.map((groupType) => (
+            <div key={groupType} className="space-y-3">
               {/* Module Header */}
               <div className="flex items-center gap-2">
                 <div className="w-1 h-5 rounded-full bg-slate-800" />
                 <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                  {moduleNumber !== 'Autres' ? `Module ${moduleNumber}` : 'Autres évaluations'}
+                  {groupType === 'C' ? 'Modules C (Pondération 20%)' :
+                   groupType === 'I' ? 'Modules I (Pondération 80%)' :
+                   groupType === 'Numérique' ? 'Modules Numériques' :
+                   'Autres évaluations'}
                 </h2>
                 <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
-                  {groupedProjects[moduleNumber].length}
+                  {groupedProjects[groupType].length}
                 </span>
               </div>
 
               {/* Projects Grid for this module */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {groupedProjects[moduleNumber].map((project) => {
-            const rawIdentifier = project.settings.testIdentifier || project.name
-            const parsed = parseTestIdentifier(rawIdentifier)
-            const effectiveModuleType = project.modulePrefix || parsed.moduleType
-            const cardColors = getModuleCardColors(effectiveModuleType)
+                {groupedProjects[groupType].map((project) => {
+            const parsed = project.parsed
+            const cardColors = getModuleCardColors(parsed.groupType)
 
             return (
             <div
@@ -452,13 +455,17 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                         </h3>
                       </div>
                       <div className="flex items-center gap-1 flex-wrap">
-                        {project.moduleNumber && project.modulePrefix && (
+                        {parsed.identificationModule && (
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            project.modulePrefix === 'I'
+                            parsed.groupType === 'I'
                               ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-blue-100 text-blue-700'
+                              : parsed.groupType === 'C'
+                              ? 'bg-blue-100 text-blue-700'
+                              : parsed.groupType === 'Numérique'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-violet-100 text-violet-700'
                           }`}>
-                            {project.modulePrefix}{project.moduleNumber}
+                            {parsed.identificationModule}
                           </span>
                         )}
                         {(() => {
@@ -468,14 +475,14 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                               <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
                                 EP {evaluationCount}
                               </span>
-                              {parsed.trimestre && (
+                              {parsed.trimestreAcademique && (
                                 <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
-                                  {parsed.trimestre}
+                                  {parsed.trimestreAcademique}
                                 </span>
                               )}
-                              {parsed.groupe && (
+                              {parsed.groupeLabo && (
                                 <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
-                                  {parsed.groupe}
+                                  {parsed.groupeLabo}
                                 </span>
                               )}
                             </>
