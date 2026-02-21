@@ -257,8 +257,8 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
                 >
                   <option value="">Aucun</option>
-                  <option value="I">I (Informatique)</option>
-                  <option value="C">C (Culture générale)</option>
+                  <option value="I">I - École professionnelle (80%)</option>
+                  <option value="C">C - Cours interentreprises (20%)</option>
                 </select>
               </div>
               <div>

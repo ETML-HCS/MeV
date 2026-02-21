@@ -122,8 +122,8 @@ export interface ModuleInfo {
  * Parse le nom du projet pour extraire les infos du module
  * Format supporté :
  * - 164 → moduleNumber: "164", prefix: null
- * - I164 → moduleNumber: "164", prefix: "I", weight: 0.8
- * - C164 → moduleNumber: "164", prefix: "C", weight: 0.2
+ * - I164 → moduleNumber: "164", prefix: "I", weight: 0.8 (École professionnelle)
+ * - C164 → moduleNumber: "164", prefix: "C", weight: 0.2 (Cours interentreprises)
  * - Module 164 - Test formé → moduleNumber: "164", prefix: null
  * - I 164 - Description → moduleNumber: "164", prefix: "I"
  */
@@ -145,10 +145,10 @@ export const parseModuleInfo = (name: string): ModuleInfo => {
 
   if (prefixPart === 'I') {
     modulePrefix = 'I'
-    weightPercentage = 0.8 // 80%
+    weightPercentage = 0.8 // 80% (École professionnelle)
   } else if (prefixPart === 'C') {
     modulePrefix = 'C'
-    weightPercentage = 0.2 // 20%
+    weightPercentage = 0.2 // 20% (Cours interentreprises)
   }
 
   return {

@@ -362,8 +362,8 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               <div className="flex items-center gap-2">
                 <div className="w-1 h-5 rounded-full bg-slate-800" />
                 <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                  {groupType === 'C' ? 'Modules C (Pondération 20%)' :
-                   groupType === 'I' ? 'Modules I (Pondération 80%)' :
+                  {groupType === 'C' ? 'Cours interentreprises (Pondération 20%)' :
+                   groupType === 'I' ? 'École professionnelle (Pondération 80%)' :
                    groupType === 'Numérique' ? 'Modules Numériques' :
                    'Autres évaluations'}
                 </h2>
