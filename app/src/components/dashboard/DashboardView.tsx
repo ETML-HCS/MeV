@@ -178,17 +178,22 @@ export const DashboardView = ({
             entry.lastname.trim().toLowerCase() === lastname.trim().toLowerCase() &&
             entry.firstname.trim().toLowerCase() === firstname.trim().toLowerCase(),
       )
-      if (!student) return { points: '', note1: '', note5: '' }
+      if (!student) return { points: '', note1: '', note5: '', isAbsent: false, isCompleted: false }
       
       const grid = grids.find((entry) => entry.studentId === student.id)
-      if (!grid) return { points: '0.00', note1: '1.0', note5: '1.0' }
+      if (!grid) return { points: '0.00', note1: '1.0', note5: '1.0', isAbsent: false, isCompleted: false }
       
+      const isAbsent = grid.testDateOverride !== undefined
+      const isCompleted = !!grid.completedAt
+
       const note1 = grid.finalGrade
       const note5 = Math.round(note1 * 2) / 2
       return {
          points: grid.totalPoints.toFixed(2),
          note1: note1.toFixed(1),
          note5: note5.toFixed(1),
+         isAbsent,
+         isCompleted
       }
    }, [students, grids])
 
@@ -260,11 +265,17 @@ export const DashboardView = ({
          if (student) {
             const grid = grids.find((g) => g.studentId === student.id);
             if (grid) {
-               const note1 = grid.finalGrade;
-               const note5 = Math.round(note1 * 2) / 2;
-               totalNote1 += note1;
-               totalNote5 += note5;
-               count++;
+               const isAbsent = grid.testDateOverride !== undefined;
+               const isCompleted = !!grid.completedAt;
+               
+               // Exclure les élèves absents qui n'ont pas encore refait le test
+               if (!isAbsent || isCompleted) {
+                  const note1 = grid.finalGrade;
+                  const note5 = Math.round(note1 * 2) / 2;
+                  totalNote1 += note1;
+                  totalNote5 += note5;
+                  count++;
+               }
             }
          }
       });
@@ -642,17 +653,35 @@ export const DashboardView = ({
                                     />
                                  </td>
                                  <td className="py-1.5 px-2 text-center">
-                                    <span className="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">{metrics.points || '—'}</span>
+                                    {metrics.isAbsent && !metrics.isCompleted ? (
+                                       <span className="text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700">abs</span>
+                                    ) : metrics.isAbsent && metrics.isCompleted ? (
+                                       <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-700">{metrics.points || '—'}</span>
+                                    ) : (
+                                       <span className="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">{metrics.points || '—'}</span>
+                                    )}
                                  </td>
                                  <td className="py-1.5 px-2 text-center">
-                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${colorForGrade(parseFloat(metrics.note1))}`}>
-                                       {metrics.note1 || '—'}
-                                    </span>
+                                    {metrics.isAbsent && !metrics.isCompleted ? (
+                                       <span className="text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700">—</span>
+                                    ) : metrics.isAbsent && metrics.isCompleted ? (
+                                       <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-700">{metrics.note1 || '—'}</span>
+                                    ) : (
+                                       <span className={`text-xs font-semibold px-2 py-1 rounded ${colorForGrade(parseFloat(metrics.note1))}`}>
+                                          {metrics.note1 || '—'}
+                                       </span>
+                                    )}
                                  </td>
                                  <td className="py-1.5 px-2 text-center">
-                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${colorForGrade(parseFloat(metrics.note5))}`}>
-                                       {metrics.note5 || '—'}
-                                    </span>
+                                    {metrics.isAbsent && !metrics.isCompleted ? (
+                                       <span className="text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700">—</span>
+                                    ) : metrics.isAbsent && metrics.isCompleted ? (
+                                       <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-700">{metrics.note5 || '—'}</span>
+                                    ) : (
+                                       <span className={`text-xs font-semibold px-2 py-1 rounded ${colorForGrade(parseFloat(metrics.note5))}`}>
+                                          {metrics.note5 || '—'}
+                                       </span>
+                                    )}
                                  </td>
                                  <td className="py-1.5 px-1 text-center">
                                     <button

@@ -100,9 +100,9 @@ export const EvaluationView = ({
 
   // Synchroniser la date alternative avec la grille courante
   useEffect(() => {
-    if (currentGrid?.testDateOverride) {
+    if (currentGrid?.testDateOverride !== undefined) {
       setHasAlternateDate(true)
-      setAlternateDate(currentGrid.testDateOverride)
+      setAlternateDate(currentGrid.testDateOverride || '')
     } else {
       setHasAlternateDate(false)
       setAlternateDate('')
@@ -334,6 +334,8 @@ export const EvaluationView = ({
     if (!checked) {
       setAlternateDate('')
       onUpdateTestDateOverride(undefined)
+    } else {
+      onUpdateTestDateOverride('')
     }
   }
 
