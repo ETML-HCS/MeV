@@ -66,6 +66,52 @@ export const getThemeColors = (testType: 'formatif' | 'sommatif'): ThemeColors =
     }
   }
 }
+export const parseProjectName = (name: string) => {
+  const normalized = (name || '').trim()
+  const parts = normalized.split('-').map(p => p.trim())
+  
+  let identificationModule = parts[0] || ''
+  let trimestreAcademique = parts[1] || ''
+  let groupeLabo = parts.slice(2).join('-') || ''
+
+  let groupType = 'Autres'
+  let groupWeight = 4
+  
+  const upperId = identificationModule.toUpperCase()
+  if (upperId.startsWith('C')) {
+    groupType = 'C'
+    groupWeight = 1
+  } else if (upperId.startsWith('I')) {
+    groupType = 'I'
+    groupWeight = 2
+  } else if (/^\d+$/.test(upperId)) {
+    groupType = 'Numérique'
+    groupWeight = 3
+  }
+
+  return {
+    identificationModule,
+    trimestreAcademique,
+    groupeLabo,
+    groupType,
+    groupWeight,
+    originalName: name
+  }
+}
+
+export const getModuleCardColors = (groupType: string) => {
+  if (groupType === 'C') {
+    return 'bg-blue-50 border-blue-200 hover:border-blue-300'
+  }
+  if (groupType === 'I') {
+    return 'bg-emerald-50 border-emerald-200 hover:border-emerald-300'
+  }
+  if (groupType === 'Numérique') {
+    return 'bg-amber-50 border-amber-200 hover:border-amber-300'
+  }
+  return 'bg-violet-50 border-violet-200 hover:border-violet-300'
+}
+
 export interface ModuleInfo {
   moduleNumber: string | null
   modulePrefix: 'I' | 'C' | null

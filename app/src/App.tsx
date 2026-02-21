@@ -17,7 +17,7 @@ import { useEvaluation } from './hooks/useEvaluation'
 import { useObjectives } from './hooks/useObjectives'
 import { useStudents } from './hooks/useStudents'
 import { calculateFinalGrade, calculateGridTotals } from './lib/calculations'
-import { db, getProject, getSettings, setSettings, updateProject, recordUserEvaluation } from './lib/db'
+import { db, getProject, getProjects, getSettings, setSettings, updateProject, recordUserEvaluation } from './lib/db'
 import { generateBatchZip } from './lib/pdf-generator'
 import { useAppStore } from './stores/useAppStore'
 import { useUserStore } from './stores/useUserStore'
@@ -52,6 +52,12 @@ function App() {
   const projectQuery = useQuery({
     queryKey: ['project', activeProjectId],
     queryFn: () => (activeProjectId ? getProject(activeProjectId) : Promise.resolve(null)),
+    enabled: !!activeProjectId,
+  })
+
+  const allProjectsQuery = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
     enabled: !!activeProjectId,
   })
 
@@ -345,6 +351,16 @@ function App() {
     )
   }
 
+  const currentProject = projectQuery.data
+  const allProjects = allProjectsQuery.data ?? []
+  const moduleProjects = currentProject 
+    ? allProjects.filter(p => p.name === currentProject.name).sort((a, b) => {
+        const epA = parseInt(a.settings.testIdentifier?.replace(/\D/g, '') || '0')
+        const epB = parseInt(b.settings.testIdentifier?.replace(/\D/g, '') || '0')
+        return epA - epB
+      })
+    : []
+
   // Mode workflow : afficher le layout avec workflow
   return (
     <>
@@ -374,6 +390,9 @@ function App() {
         onOpenMasterGrid={() => setActiveTab('master-grid')}
         canOpenPseudo={tabAccess?.['students'] ?? true}
         canOpenMasterGrid={tabAccess?.['master-grid'] ?? true}
+        moduleProjects={moduleProjects}
+        activeProjectId={activeProjectId}
+        onSelectProject={handleOpenProject}
       >
       {activeTab === 'dashboard' && (
         <DashboardView

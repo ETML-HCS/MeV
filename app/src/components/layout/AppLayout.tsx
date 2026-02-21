@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import type { AppTab } from '../../types'
+import type { AppTab, EvaluationProject } from '../../types'
+import { parseProjectName } from '../../utils/helpers'
 
 interface AppLayoutProps {
    activeTab: AppTab
@@ -22,6 +23,9 @@ interface AppLayoutProps {
    onOpenMasterGrid?: () => void
    canOpenPseudo?: boolean
    canOpenMasterGrid?: boolean
+   moduleProjects?: EvaluationProject[]
+   activeProjectId?: string | null
+   onSelectProject?: (projectId: string) => void
    children: ReactNode
 }
 
@@ -58,11 +62,26 @@ export const AppLayout = ({
    onOpenMasterGrid,
    canOpenPseudo,
    canOpenMasterGrid,
+   moduleProjects = [],
+   activeProjectId,
+   onSelectProject,
    children,
 }: AppLayoutProps) => {
    const [showQuickAccessMenu, setShowQuickAccessMenu] = useState(false)
    const activeIndex = workflowTabsEnhanced.findIndex(t => t.id === activeTab)
    const activeTabMeta = workflowTabsEnhanced.find(t => t.id === activeTab) || tabs.find(t => t.id === activeTab)
+
+   const activeProject = moduleProjects.find(p => p.id === activeProjectId)
+   const parsedModule = activeProject ? parseProjectName(activeProject.name) : null
+
+   const getModuleBadgeColor = (type: string) => {
+      switch (type) {
+         case 'C': return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+         case 'I': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+         case 'Numérique': return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+         default: return 'bg-violet-500/20 text-violet-300 border-violet-500/30'
+      }
+   }
 
    return (
       <div className="flex h-screen bg-slate-100">
@@ -85,11 +104,51 @@ export const AppLayout = ({
             <div className="mx-5 h-px bg-slate-700/50" />
 
             {/* Workflow Steps */}
-            <nav className="flex-1 px-3 py-4" aria-label="Navigation principale">
-               <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest px-3 mb-3">
-                  Workflow
+            <nav className="flex-1 px-3 py-4 flex flex-col" aria-label="Navigation principale">
+               <div className="flex items-center justify-between px-3 mb-3">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                     Workflow
+                  </div>
+                  {parsedModule && (
+                     <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${getModuleBadgeColor(parsedModule.groupType)}`} title={`Type: ${parsedModule.groupType}`}>
+                           {parsedModule.identificationModule}
+                        </span>
+                        {parsedModule.groupeLabo && (
+                           <span className="text-[10px] font-medium text-slate-400 truncate max-w-[80px]" title={`Groupe: ${parsedModule.groupeLabo}`}>
+                              {parsedModule.groupeLabo}
+                           </span>
+                        )}
+                     </div>
+                  )}
                </div>
-               <div className="space-y-0.5">
+
+               {/* Module Tabs (EP1, EP2, etc.) */}
+               {moduleProjects.length > 0 && (
+                  <div className="px-3 mb-4 flex gap-1 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                     {moduleProjects.map(project => {
+                        const isProjectActive = project.id === activeProjectId
+                        const epName = project.settings.testIdentifier || 'EP?'
+                        return (
+                           <button
+                              key={project.id}
+                              onClick={() => onSelectProject?.(project.id)}
+                              className={`
+                                 shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-md transition-all
+                                 ${isProjectActive 
+                                    ? 'bg-slate-700 text-white shadow-sm' 
+                                    : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
+                                 }
+                              `}
+                           >
+                              {epName}
+                           </button>
+                        )
+                     })}
+                  </div>
+               )}
+
+               <div className="space-y-0.5 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {workflowTabsEnhanced.map((tab, index) => {
                      const isActive = activeTab === tab.id
                      const isEnabled = tabAccess?.[tab.id] ?? true
