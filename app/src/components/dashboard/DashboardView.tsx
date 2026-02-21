@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { calculateGridTotals } from '../../lib/calculations'
 import { exportDatabase, importDatabase, downloadBackup } from '../../lib/db'
 import type { AppSettings, Objective, Student, StudentGrid, Evaluation } from '../../types'
@@ -172,7 +172,7 @@ export const DashboardView = ({
       ? studentInputs.filter((entry) => entry.lastname.trim() || entry.firstname.trim())
       : studentInputs
 
-   const getMetricsForInput = (lastname: string, firstname: string) => {
+   const getMetricsForInput = useCallback((lastname: string, firstname: string) => {
       const student = students.find(
          (entry) =>
             entry.lastname.trim().toLowerCase() === lastname.trim().toLowerCase() &&
@@ -190,7 +190,7 @@ export const DashboardView = ({
          note1: note1.toFixed(1),
          note5: note5.toFixed(1),
       }
-   }
+   }, [students, grids])
 
    useEffect(() => {
       // Initialiser depuis la DB seulement s'il n'y a pas déjà de saisie en cours
@@ -245,6 +245,36 @@ export const DashboardView = ({
       setStudentInputs(cleaned)
       setIsStudentInputClosed(true)
    }
+
+   const classAverages = useMemo(() => {
+      let totalNote1 = 0;
+      let totalNote5 = 0;
+      let count = 0;
+
+      displayedStudentInputs.forEach(entry => {
+         const student = students.find(
+            (s) =>
+               s.lastname.trim().toLowerCase() === entry.lastname.trim().toLowerCase() &&
+               s.firstname.trim().toLowerCase() === entry.firstname.trim().toLowerCase(),
+         );
+         if (student) {
+            const grid = grids.find((g) => g.studentId === student.id);
+            if (grid) {
+               const note1 = grid.finalGrade;
+               const note5 = Math.round(note1 * 2) / 2;
+               totalNote1 += note1;
+               totalNote5 += note5;
+               count++;
+            }
+         }
+      });
+
+      if (count === 0) return { note1: null, note5: null };
+      return {
+         note1: (totalNote1 / count).toFixed(1),
+         note5: (totalNote5 / count).toFixed(1)
+      };
+   }, [displayedStudentInputs, students, grids]);
 
    return (
       <section className="space-y-6">
@@ -568,8 +598,12 @@ export const DashboardView = ({
                            <th className="py-2.5 px-3 text-left text-[10px] font-semibold text-slate-400 uppercase">Nom</th>
                            <th className="py-2.5 px-3 text-left text-[10px] font-semibold text-slate-400 uppercase">Prénom</th>
                            <th className="w-20 py-2.5 px-2 text-center text-[10px] font-semibold text-slate-400 uppercase">Pts</th>
-                           <th className="w-16 py-2.5 px-2 text-center text-[10px] font-semibold text-slate-400 uppercase">/10</th>
-                           <th className="w-16 py-2.5 px-2 text-center text-[10px] font-semibold text-slate-400 uppercase">/5</th>
+                           <th className="w-24 py-2.5 px-2 text-center text-[10px] font-semibold text-slate-400 uppercase">
+                              {classAverages.note1 ? `${classAverages.note1} | (/10)` : '/10'}
+                           </th>
+                           <th className="w-24 py-2.5 px-2 text-center text-[10px] font-semibold text-slate-400 uppercase">
+                              {classAverages.note5 ? `${classAverages.note5} | (/5)` : '/5'}
+                           </th>
                            <th className="w-12 py-2.5 px-1 text-center text-[10px] font-semibold text-slate-400 uppercase">Actions</th>
                         </tr>
                      </thead>
