@@ -102,7 +102,32 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
     mutationFn: async (testDateOverride: string | undefined) => {
       if (!studentId) return
       const existingGrid = await db.grids.get(studentId)
-      if (!existingGrid) return
+      
+      // Si la grille n'existe pas encore, on la crée avec des valeurs par défaut
+      if (!existingGrid) {
+        const totals = calculateGridTotals(objectives, [])
+        const grid: StudentGrid = {
+          studentId,
+          evaluations: [],
+          totalPoints: totals.totalPoints,
+          maxPoints: totals.maxPoints,
+          finalGrade: calculateFinalGrade(
+            totals.totalPoints,
+            totals.maxPoints,
+            settings.threshold,
+            settings.correctionError,
+          ),
+          moduleName: settings.moduleName,
+          moduleDescription: settings.moduleDescription,
+          testDate: settings.testDate,
+          testDateOverride,
+          correctedBy: settings.correctedBy,
+          generatedAt: new Date(),
+          completedAt: null,
+        }
+        await db.grids.put(grid, activeProjectId || undefined)
+        return
+      }
       
       const updatedGrid: StudentGrid = {
         ...existingGrid,
