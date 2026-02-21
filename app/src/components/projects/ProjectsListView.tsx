@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createProject, deleteProject, duplicateProject, getProjects, updateProject, getProject, createEvaluation, downloadProjectBackup, downloadAllProjectsBackup, db } from '../../lib/db'
+import { createProject, deleteProject, duplicateProject, getProjects, updateProject, createEvaluation, downloadProjectBackup, downloadAllProjectsBackup, db } from '../../lib/db'
 
 interface ProjectsListViewProps {
   onSelectProject: (projectId: string) => void
@@ -60,7 +60,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   const [newProjectName, setNewProjectName] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+  const [editingModuleName, setEditingModuleName] = useState<string | null>(null)
   const [editingProjectName, setEditingProjectName] = useState('')
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting'>('idle')
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null)
@@ -130,7 +130,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     mutationFn: updateProject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      setEditingProjectId(null)
+      setEditingModuleName(null)
       setEditingProjectName('')
     },
   })
@@ -161,30 +161,6 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   const projects = projectsQuery.data ?? []
   const evaluationTemplates = evaluationTemplatesQuery.data ?? []
 
-  const evaluationCountByProjectId = useMemo(() => {
-    const groups = new Map<string, Array<(typeof projects)[number]>>()
-
-    for (const project of projects) {
-      const key = project.name
-      const existing = groups.get(key)
-      if (existing) {
-        existing.push(project)
-      } else {
-        groups.set(key, [project])
-      }
-    }
-
-    const counts = new Map<string, number>()
-    groups.forEach((groupProjects) => {
-      const total = groupProjects.length
-      groupProjects.forEach((project) => {
-        counts.set(project.id, total)
-      })
-    })
-
-    return counts
-  }, [projects])
-
   const handleCreate = async () => {
     await createMutation.mutateAsync()
   }
@@ -199,29 +175,37 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     duplicateMutation.mutate(id)
   }
 
-  const handleStartEdit = async (projectId: string, currentName: string) => {
-    setEditingProjectId(projectId)
-    setEditingProjectName(currentName)
+  const handleStartEdit = async (moduleName: string) => {
+    setEditingModuleName(moduleName)
+    setEditingProjectName(moduleName)
   }
 
-  const handleSaveEdit = async (projectId: string) => {
+  const handleSaveEdit = async (oldName: string) => {
     if (!editingProjectName.trim()) {
-      setEditingProjectId(null)
+      setEditingModuleName(null)
       return
     }
     
-    const project = await getProject(projectId)
-    if (project) {
-      await updateMutation.mutateAsync({
-        ...project,
-        name: editingProjectName.trim(),
-        updatedAt: new Date(),
-      })
+    const newName = editingProjectName.trim()
+    const moduleToUpdate = modulesByName.find(m => m.name === oldName)
+    
+    if (moduleToUpdate && newName !== oldName) {
+      // Mettre à jour tous les projets de ce module
+      await Promise.all(moduleToUpdate.evaluations.map(project => 
+        updateMutation.mutateAsync({
+          ...project,
+          name: newName,
+          updatedAt: new Date(),
+        })
+      ))
     }
+    
+    setEditingModuleName(null)
+    setEditingProjectName('')
   }
 
   const handleCancelEdit = () => {
-    setEditingProjectId(null)
+    setEditingModuleName(null)
     setEditingProjectName('')
   }
 
@@ -236,26 +220,60 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     exportAllProjectsMutation.mutate()
   }
 
-  // Grouper les projets par type de module
-  const groupedProjects = projects.reduce((acc, project) => {
-    const parsed = parseProjectName(project.name)
-    const groupType = parsed.groupType
-    if (!acc[groupType]) {
-      acc[groupType] = []
-    }
-    acc[groupType].push({ ...project, parsed })
+  // Grouper les projets par nom (qui représente le module/classe)
+  const modulesByName = useMemo(() => {
+    const map = new Map<string, {
+      name: string;
+      parsed: ReturnType<typeof parseProjectName>;
+      evaluations: typeof projects;
+    }>()
+
+    projects.forEach(project => {
+      const name = project.name
+      if (!map.has(name)) {
+        map.set(name, {
+          name,
+          parsed: parseProjectName(name),
+          evaluations: []
+        })
+      }
+      map.get(name)!.evaluations.push(project)
+    })
+
+    // Trier les évaluations dans chaque module par EP (EP1, EP2, etc.)
+    map.forEach(module => {
+      module.evaluations.sort((a, b) => {
+        const epA = parseInt(a.settings.testIdentifier?.replace(/\D/g, '') || '0')
+        const epB = parseInt(b.settings.testIdentifier?.replace(/\D/g, '') || '0')
+        return epA - epB
+      })
+    })
+
+    return Array.from(map.values())
+  }, [projects])
+
+  // Grouper les modules par type (C, I, Numérique, Autres)
+  const groupedModules = useMemo(() => {
+    const acc: Record<string, typeof modulesByName> = {}
+    modulesByName.forEach(module => {
+      const groupType = module.parsed.groupType
+      if (!acc[groupType]) {
+        acc[groupType] = []
+      }
+      acc[groupType].push(module)
+    })
     return acc
-  }, {} as Record<string, Array<typeof projects[number] & { parsed: ReturnType<typeof parseProjectName> }>>)
+  }, [modulesByName])
 
   // Trier les groupes : C, I, Numérique, Autres
   const groupOrder = { 'C': 1, 'I': 2, 'Numérique': 3, 'Autres': 4 }
-  const sortedGroups = Object.keys(groupedProjects).sort((a, b) => {
+  const sortedGroups = Object.keys(groupedModules).sort((a, b) => {
     return groupOrder[a as keyof typeof groupOrder] - groupOrder[b as keyof typeof groupOrder]
   })
 
-  // Trier les projets à l'intérieur de chaque groupe par ordre alphabétique
+  // Trier les modules à l'intérieur de chaque groupe par ordre alphabétique
   sortedGroups.forEach(group => {
-    groupedProjects[group].sort((a, b) => a.name.localeCompare(b.name))
+    groupedModules[group].sort((a, b) => a.name.localeCompare(b.name))
   })
 
   return (
@@ -396,25 +414,25 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                    'Autres évaluations'}
                 </h2>
                 <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
-                  {groupedProjects[groupType].length}
+                  {groupedModules[groupType].length}
                 </span>
               </div>
 
               {/* Projects Grid for this module */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {groupedProjects[groupType].map((project) => {
-            const parsed = project.parsed
+                {groupedModules[groupType].map((module) => {
+            const parsed = module.parsed
             const cardColors = getModuleCardColors(parsed.groupType)
 
             return (
             <div
-              key={project.id}
-              className={`${cardColors} rounded-xl border shadow-sm hover:shadow-md transition-all group/card`}
+              key={module.name}
+              className={`${cardColors} rounded-xl border shadow-sm hover:shadow-md transition-all group/card flex flex-col`}
             >
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-3 flex-1">
                 {/* Title + Badges */}
                 <div>
-                  {editingProjectId === project.id ? (
+                  {editingModuleName === module.name ? (
                     <div className="space-y-2">
                       <input
                         type="text"
@@ -422,14 +440,14 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                         onChange={(e) => setEditingProjectName(e.target.value)}
                         autoFocus
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveEdit(project.id)
+                          if (e.key === 'Enter') handleSaveEdit(module.name)
                           if (e.key === 'Escape') handleCancelEdit()
                         }}
                         className="w-full border border-blue-300 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-blue-50"
                       />
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleSaveEdit(project.id)}
+                          onClick={() => handleSaveEdit(module.name)}
                           disabled={updateMutation.isPending}
                           className="px-3 py-1 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 disabled:opacity-40 transition-all"
                         >
@@ -447,11 +465,11 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                     <div className="space-y-1.5">
                       <div className="flex items-start justify-between gap-2">
                         <h3
-                          onClick={() => handleStartEdit(project.id, project.name)}
+                          onClick={() => handleStartEdit(module.name)}
                           className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 cursor-pointer transition-colors flex-1"
                           title="Cliquer pour éditer le nom"
                         >
-                          {project.name}
+                          {module.name}
                         </h3>
                       </div>
                       <div className="flex items-center gap-1 flex-wrap">
@@ -468,98 +486,90 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                             {parsed.identificationModule}
                           </span>
                         )}
-                        {(() => {
-                          const evaluationCount = evaluationCountByProjectId.get(project.id) ?? 1
-                          return (
-                            <>
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
-                                EP {evaluationCount}
-                              </span>
-                              {parsed.trimestreAcademique && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
-                                  {parsed.trimestreAcademique}
-                                </span>
-                              )}
-                              {parsed.groupeLabo && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
-                                  {parsed.groupeLabo}
-                                </span>
-                              )}
-                            </>
-                          )
-                        })()}
+                        {parsed.trimestreAcademique && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+                            {parsed.trimestreAcademique}
+                          </span>
+                        )}
+                        {parsed.groupeLabo && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                            {parsed.groupeLabo}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
-                  {project.description && !editingProjectId && (
-                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{project.description}</p>
+                  {module.evaluations[0]?.description && !editingModuleName && (
+                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{module.evaluations[0].description}</p>
                   )}
                 </div>
+              </div>
 
-                {/* Stats row */}
-                <div className="flex gap-3 text-[11px] text-slate-500">
-                  <span>{project.students.length} élève{project.students.length !== 1 ? 's' : ''}</span>
-                  <span className="text-slate-300">|</span>
-                  <span>{project.objectives.length} obj.</span>
-                  <span className="text-slate-300">|</span>
-                  <span>{project.grids.length} éval.</span>
-                </div>
-
-                {/* Date + Actions */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                  <span className="text-[10px] text-slate-400">
-                    {new Date(project.updatedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => onSelectProject(project.id)}
-                      disabled={editingProjectId === project.id}
-                      className="px-3 py-1.5 bg-blue-600 text-white text-[11px] font-bold rounded-md hover:bg-blue-700 disabled:opacity-40 transition-all"
-                    >
-                      Ouvrir
-                    </button>
-                    <button
-                      onClick={() => handleExportProject(project.id)}
-                      disabled={exportingProjectId === project.id || editingProjectId === project.id}
-                      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-all disabled:opacity-40"
-                      title="Télécharger sauvegarde"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => createEvaluationMutation.mutate(project.id)}
-                      disabled={createEvaluationMutation.isPending || editingProjectId === project.id}
-                      className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-all disabled:opacity-40"
-                      title="Nouvelle évaluation (EP suivante)"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleDuplicate(project.id)}
-                      disabled={duplicateMutation.isPending || editingProjectId === project.id}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all disabled:opacity-40"
-                      title="Dupliquer"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(project.id)}
-                      disabled={deleteMutation.isPending || editingProjectId === project.id}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all disabled:opacity-40"
-                      title="Supprimer"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+              {/* Evaluations List */}
+              <div className="border-t border-slate-200/60 bg-white/50 rounded-b-xl p-2 space-y-1">
+                {module.evaluations.map(evaluation => (
+                  <div key={evaluation.id} className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200 hover:shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-700 w-8">
+                        {evaluation.settings.testIdentifier || 'EP?'}
+                      </span>
+                      <div className="flex gap-2 text-[10px] text-slate-500">
+                        <span title="Élèves">{evaluation.students.length} <svg className="w-3 h-3 inline -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></span>
+                        <span title="Évaluations">{evaluation.grids.length} <svg className="w-3 h-3 inline -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg></span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => onSelectProject(evaluation.id)}
+                        className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white text-[10px] font-bold rounded transition-all"
+                      >
+                        Ouvrir
+                      </button>
+                      <button
+                        onClick={() => handleExportProject(evaluation.id)}
+                        disabled={exportingProjectId === evaluation.id}
+                        className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all disabled:opacity-40"
+                        title="Télécharger sauvegarde"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDuplicate(evaluation.id)}
+                        disabled={duplicateMutation.isPending}
+                        className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all disabled:opacity-40"
+                        title="Dupliquer"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(evaluation.id)}
+                        disabled={deleteMutation.isPending}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all disabled:opacity-40"
+                        title="Supprimer"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ))}
+                
+                {/* Add new evaluation button */}
+                <button
+                  onClick={() => createEvaluationMutation.mutate(module.evaluations[0].id)}
+                  disabled={createEvaluationMutation.isPending}
+                  className="w-full mt-1 py-1.5 border border-dashed border-slate-300 text-slate-500 hover:text-green-600 hover:border-green-300 hover:bg-green-50 rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center gap-1"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Nouvelle évaluation (EP)
+                </button>
               </div>
             </div>
                 )})}
