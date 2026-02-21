@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAllUsers } from '../../lib/db'
 import type { User } from '../../types'
@@ -58,13 +58,37 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     onClose()
   }
 
+  // Fermer avec Escape
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleSkip()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={handleSkip}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
+        <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-8 text-white relative">
+          <button
+            onClick={handleSkip}
+            className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+            aria-label="Fermer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           <h2 className="text-2xl font-bold">Bienvenue</h2>
           <p className="text-blue-100 text-sm mt-2">
             Identifiez-vous pour accéder à vos évaluations

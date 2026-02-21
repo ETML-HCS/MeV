@@ -1,7 +1,9 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { calculateIndicatorPoints } from '../../lib/calculations'
 import { exportSynthesisWorkbook } from '../../lib/excel-utils'
 import { generateBatchZip, generateStudentPdfBlob } from '../../lib/pdf-generator'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { Objective, Student, StudentGrid } from '../../types'
 
 interface SynthesisViewProps {
@@ -34,23 +36,79 @@ const downloadBlob = (blob: Blob, filename: string) => {
 
 export const SynthesisView = ({ objectives, students, grids, testDate, testIdentifier = 'C216', moduleName = 'Module', correctedBy = '' }: SynthesisViewProps) => {
   const [isExporting, setIsExporting] = useState(false)
-  const [openMenuStudentId, setOpenMenuStudentId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'name' | 'grade'>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [confirmFn, confirmDialogProps] = useConfirm()
 
   // Filtrer pour n'afficher que les élèves ayant au moins une grille (évalués)
   const evaluatedStudents = students.filter(student => 
     grids.some(grid => grid.studentId === student.id)
   )
 
-  // Fermer le menu quand on clique en dehors
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (openMenuStudentId && !(e.target as Element).closest('.student-menu-container')) {
-        setOpenMenuStudentId(null)
+  // Calculer le total par élève
+  const studentTotals = useMemo(() => {
+    const totals = new Map<string, number>()
+    for (const student of evaluatedStudents) {
+      const grid = grids.find(g => g.studentId === student.id)
+      let total = 0
+      for (const objective of objectives) {
+        for (const indicator of objective.indicators) {
+          const evaluation = grid?.evaluations.find(
+            e => e.objectiveId === objective.id && e.indicatorId === indicator.id
+          )
+          if (evaluation?.score !== null && evaluation?.score !== undefined) {
+            total += calculateIndicatorPoints(indicator.weight * objective.weight, evaluation.score)
+          }
+        }
       }
+      totals.set(student.id, total)
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [openMenuStudentId])
+    return totals
+  }, [evaluatedStudents, grids, objectives])
+
+  // Trier les élèves
+  const sortedStudents = useMemo(() => {
+    const sorted = [...evaluatedStudents]
+    sorted.sort((a, b) => {
+      if (sortBy === 'name') {
+        const cmp = `${a.lastname} ${a.firstname}`.localeCompare(`${b.lastname} ${b.firstname}`)
+        return sortDir === 'asc' ? cmp : -cmp
+      } else {
+        const totalA = studentTotals.get(a.id) ?? 0
+        const totalB = studentTotals.get(b.id) ?? 0
+        return sortDir === 'asc' ? totalA - totalB : totalB - totalA
+      }
+    })
+    return sorted
+  }, [evaluatedStudents, sortBy, sortDir, studentTotals])
+
+  // Statistiques de classe
+  const classStats = useMemo(() => {
+    const totals = Array.from(studentTotals.values())
+    if (totals.length === 0) return null
+    const sorted = [...totals].sort((a, b) => a - b)
+    const sum = sorted.reduce((acc, v) => acc + v, 0)
+    const mean = sum / sorted.length
+    const min = sorted[0]
+    const max = sorted[sorted.length - 1]
+    const mid = Math.floor(sorted.length / 2)
+    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+    return { mean, median, min, max, count: sorted.length }
+  }, [studentTotals])
+
+  const toggleSort = (col: 'name' | 'grade') => {
+    if (sortBy === col) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(col)
+      setSortDir(col === 'name' ? 'asc' : 'desc')
+    }
+  }
+
+  const sortArrow = (col: 'name' | 'grade') => {
+    if (sortBy !== col) return ' ↕'
+    return sortDir === 'asc' ? ' ↑' : ' ↓'
+  }
 
   const exportExcel = () => {
     const blob = exportSynthesisWorkbook(objectives, students, grids)
@@ -80,7 +138,13 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
       setTimeout(() => URL.revokeObjectURL(url), 60000)
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error)
-      alert('Erreur lors de la génération du PDF')
+      confirmFn({
+        title: 'Erreur PDF',
+        message: 'Une erreur est survenue lors de la génération du PDF.',
+        confirmLabel: 'OK',
+        variant: 'danger',
+        hideCancel: true,
+      })
     }
   }
 
@@ -145,19 +209,47 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
         </div>
       </div>
 
+      {/* STATISTIQUES DE CLASSE */}
+      {classStats && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h3 className="text-sm font-bold text-slate-700 mb-3">Statistiques de classe</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
+              <div className="text-lg font-bold text-blue-700">{classStats.mean.toFixed(1)}</div>
+              <div className="text-[11px] text-blue-500 font-medium">Moyenne</div>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-center">
+              <div className="text-lg font-bold text-purple-700">{classStats.median.toFixed(1)}</div>
+              <div className="text-[11px] text-purple-500 font-medium">Médiane</div>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-center">
+              <div className="text-lg font-bold text-red-700">{classStats.min.toFixed(1)}</div>
+              <div className="text-[11px] text-red-500 font-medium">Min</div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-center">
+              <div className="text-lg font-bold text-emerald-700">{classStats.max.toFixed(1)}</div>
+              <div className="text-[11px] text-emerald-500 font-medium">Max</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TABLE */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-900 text-white text-xs uppercase tracking-wider sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold min-w-56 border-r border-slate-700">
-                  Objectif / Question
+                <th 
+                  className="px-4 py-3 text-left font-semibold min-w-56 border-r border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors select-none"
+                  onClick={() => toggleSort('name')}
+                >
+                  Objectif / Question{sortArrow('name')}
                 </th>
-                {evaluatedStudents.map((student) => (
+                {sortedStudents.map((student) => (
                   <th 
                     key={student.id} 
-                    className="px-2 py-3 text-center font-semibold border-l border-slate-700 min-w-28 relative"
+                    className="px-2 py-3 text-center font-semibold border-l border-slate-700 min-w-28 relative group"
                   >
                     <div className="truncate max-w-24 mx-auto" title={`${student.lastname} ${student.firstname}`}>
                       {student.lastname}
@@ -166,43 +258,20 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                       {student.firstname}
                     </div>
                     
-                    {/* Bouton menu 3 points */}
-                    <div className="student-menu-container absolute top-2 right-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setOpenMenuStudentId(openMenuStudentId === student.id ? null : student.id)
-                        }}
-                        className="p-1.5 hover:bg-slate-700 rounded-md transition-colors opacity-60 hover:opacity-100"
-                        title="Actions"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
-                          <circle cx="8" cy="2.5" r="1.5" />
-                          <circle cx="8" cy="8" r="1.5" />
-                          <circle cx="8" cy="13.5" r="1.5" />
-                        </svg>
-                      </button>
-                      
-                      {/* Menu déroulant */}
-                      {openMenuStudentId === student.id && (
-                        <div className="absolute top-full right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl z-50 min-w-40 overflow-hidden">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              viewStudentPdf(student)
-                              setOpenMenuStudentId(null)
-                            }}
-                            className="w-full px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors"
-                          >
-                            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            <span className="font-medium">Voir le PDF</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Bouton PDF direct */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        viewStudentPdf(student)
+                      }}
+                      className="absolute top-2 right-2 p-1 hover:bg-slate-700 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                      title="Voir le PDF"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
                   </th>
                 ))}
               </tr>
@@ -233,7 +302,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                           </span>
                         </div>
                       </td>
-                      {evaluatedStudents.map((student) => {
+                      {sortedStudents.map((student) => {
                         const grid = grids.find((entry) => entry.studentId === student.id)
                         const evaluation = grid?.evaluations.find(
                           (entry) => entry.objectiveId === objective.id && entry.indicatorId === indicator.id,
@@ -262,7 +331,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                         <span className="text-xs text-slate-800">Total O{objective.number}</span>
                       </div>
                     </td>
-                    {evaluatedStudents.map((student) => {
+                    {sortedStudents.map((student) => {
                       const grid = grids.find((entry) => entry.studentId === student.id)
                       const total = objective.indicators.reduce((sum, indicator) => {
                         const evaluation = grid?.evaluations.find(
@@ -305,6 +374,8 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
           </div>
         ))}
       </div>
+
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

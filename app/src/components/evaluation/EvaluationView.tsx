@@ -708,6 +708,10 @@ export const EvaluationView = ({
 
             {focusMode && (
               <div className="ml-auto flex items-center gap-2">
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md text-[10px] text-blue-600 font-medium">
+                  <kbd className="px-1 py-0.5 bg-white border border-blue-200 rounded text-[10px] font-mono">0-3</kbd> noter
+                  <kbd className="px-1 py-0.5 bg-white border border-blue-200 rounded text-[10px] font-mono ml-1">↵</kbd> suivant
+                </span>
                 <button
                   onClick={goToPreviousFocus}
                   disabled={totalVisibleQuestions <= 1}
@@ -899,7 +903,7 @@ export const EvaluationView = ({
                             )}
                             
                             {/* Score buttons */}
-                            <div className="flex items-center gap-1.5 mt-2.5">
+                            <div className="flex items-center gap-2 mt-2.5">
                               {SCORE_OPTIONS.map((option) => {
                                 const isScoreSelected = currentScore === option.value
                                 return (
@@ -915,7 +919,7 @@ export const EvaluationView = ({
                                     }}
                                     title={`${option.value} pts — ${option.desc}`}
                                     className={`
-                                      w-8 h-8 rounded-md text-xs font-bold transition-all
+                                      w-10 h-10 rounded-lg text-sm font-bold transition-all
                                       ${isScoreSelected
                                         ? `${option.color} ${option.textColor} shadow-md scale-110 ring-2 ring-offset-2 ${option.ringClass}`
                                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:scale-105'

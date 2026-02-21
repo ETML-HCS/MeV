@@ -55,11 +55,20 @@ export const useObjectives = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   })
 
+  const replaceAll = useMutation({
+    mutationFn: async (objectives: Objective[]) => {
+      await db.objectives.clear()
+      await db.objectives.bulkAdd(objectives)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  })
+
   return {
     objectives: objectivesQuery.data ?? [],
     isLoading: objectivesQuery.isLoading,
     upsert,
     remove,
     reorder,
+    replaceAll,
   }
 }

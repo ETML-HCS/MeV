@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react'
-import { createSqlObjectiveTemplate } from '../../lib/sql-objective-template'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { db } from '../../lib/db'
 import { MAX_INDICATORS_PER_OBJECTIVE } from '../../utils/constants'
 import { TAXONOMY_LEVELS } from '../../utils/taxonomy'
 import { uid } from '../../utils/helpers'
-import type { Indicator, Objective, StudentGrid } from '../../types'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
+import type { Indicator, Objective, StudentGrid, EvaluationProject, ModuleTemplate } from '../../types'
 
 interface ObjectivesViewProps {
+  project?: EvaluationProject | null
   objectives: Objective[]
   grids: StudentGrid[]
   onSave: (objective: Objective) => Promise<void>
@@ -29,10 +33,55 @@ const createIndicator = (questionNumber?: number): Indicator => ({
   questionNumber,
 })
 
-export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder }: ObjectivesViewProps) => {
+export const ObjectivesView = ({ project, objectives, grids, onSave, onDelete, onReorder }: ObjectivesViewProps) => {
   const [title, setTitle] = useState('')
   const [showQuickImport, setShowQuickImport] = useState(false)
   const [quickImportText, setQuickImportText] = useState('')
+  const [selectedSqueletteId, setSelectedSqueletteId] = useState<string>('')
+  const [confirm, confirmDialogProps] = useConfirm()
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  // Debounced save for text inputs (300ms)
+  const debouncedSave = useCallback((objective: Objective) => {
+    const key = objective.id
+    const existing = debounceTimers.current.get(key)
+    if (existing) clearTimeout(existing)
+    debounceTimers.current.set(key, setTimeout(() => {
+      onSave(objective)
+      debounceTimers.current.delete(key)
+    }, 300))
+  }, [onSave])
+
+  const squelettesQuery = useQuery({
+    queryKey: ['moduleTemplates', project?.modulePrefix, project?.moduleNumber, project?.settings?.testIdentifier],
+    queryFn: async () => {
+      if (!project?.modulePrefix || !project?.moduleNumber) return []
+      const allTemplates = await db.moduleTemplates.toArray()
+      return allTemplates.filter(t => 
+        t.modulePrefix === project.modulePrefix && 
+        t.moduleNumber === project.moduleNumber && 
+        t.testIdentifier === (project.settings?.testIdentifier || '')
+      )
+    },
+    enabled: !!project && objectives.length === 0
+  })
+
+  const handleApplySquelette = async () => {
+    if (!selectedSqueletteId || !squelettesQuery.data) return
+    const template = squelettesQuery.data.find((t: ModuleTemplate) => t.id === selectedSqueletteId)
+    if (!template) return
+
+    for (const obj of template.objectives) {
+      await onSave({
+        id: crypto.randomUUID(),
+        number: obj.number,
+        title: obj.title,
+        description: obj.description,
+        weight: obj.weight,
+        indicators: []
+      })
+    }
+  }
 
   const fallbackQuestionNumberMap = useMemo(() => {
     const map = new Map<string, number>()
@@ -80,24 +129,24 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
     const hasData = hasEvaluations(objective.id)
     const evalCount = countEvaluations(objective.id)
     
+    let ok: boolean
     if (hasData) {
-      const confirmed = window.confirm(
-        `⚠️ ATTENTION : Suppression dangereuse !\n\n` +
-        `L'objectif "${objective.title}" contient ${evalCount} évaluation(s) en cours.\n\n` +
-        `Si vous supprimez cet objectif, TOUTES les données d'évaluation associées seront DÉFINITIVEMENT PERDUES.\n\n` +
-        `Êtes-vous ABSOLUMENT SÛR de vouloir continuer ?`
-      )
-      
-      if (!confirmed) return
+      ok = await confirm({
+        title: 'Suppression dangereuse',
+        message: `L'objectif "${objective.title}" contient ${evalCount} évaluation(s) en cours.\n\nSi vous supprimez cet objectif, TOUTES les données d'évaluation associées seront DÉFINITIVEMENT PERDUES.`,
+        confirmLabel: 'Supprimer définitivement',
+        variant: 'danger',
+      })
     } else {
-      const confirmed = window.confirm(
-        `Supprimer l'objectif "${objective.title}" ?\n\nCette action est irréversible.`
-      )
-      
-      if (!confirmed) return
+      ok = await confirm({
+        title: 'Supprimer l\'objectif',
+        message: `Supprimer l'objectif "${objective.title}" ?\n\nCette action est irréversible.`,
+        confirmLabel: 'Supprimer',
+        variant: 'warning',
+      })
     }
     
-    await onDelete(objective.id)
+    if (ok) await onDelete(objective.id)
   }
 
   const addObjective = async () => {
@@ -123,18 +172,6 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
       indicators: objective.indicators.map((indicator) => ({
         ...indicator,
         id: uid(),
-        questionNumber: nextQuestionNumber++,
-      })),
-    })
-  }
-
-  const loadSqlTemplate = async () => {
-    let nextQuestionNumber = getNextQuestionNumber()
-    const template = createSqlObjectiveTemplate(objectives.length + 1)
-    await onSave({
-      ...template,
-      indicators: template.indicators.map((indicator) => ({
-        ...indicator,
         questionNumber: nextQuestionNumber++,
       })),
     })
@@ -240,6 +277,38 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
 
   return (
     <section className="space-y-8">
+      {/* SQUELETTES DISPONIBLES */}
+      {objectives.length === 0 && squelettesQuery.data && squelettesQuery.data.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-blue-900 mb-2">Squelettes disponibles pour ce module</h3>
+          <p className="text-sm text-blue-700 mb-4">
+            Nous avons trouvé des squelettes correspondant à votre module ({project?.modulePrefix}{project?.moduleNumber} - {project?.settings?.testIdentifier}). 
+            Vous pouvez importer les objectifs automatiquement ou commencer de zéro.
+          </p>
+          <div className="flex items-center gap-4">
+            <select
+              value={selectedSqueletteId}
+              onChange={(e) => setSelectedSqueletteId(e.target.value)}
+              className="flex-1 max-w-md px-4 py-2.5 rounded-xl border border-blue-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+            >
+              <option value="">-- Choisir une version --</option>
+              {squelettesQuery.data.map((t: ModuleTemplate) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.version ? `(Version ${t.version})` : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleApplySquelette}
+              disabled={!selectedSqueletteId}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Importer le squelette
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HEADER ACTIONS */}
       <div className="flex flex-wrap items-end gap-4 pb-6 border-b border-slate-200">
         <div className="flex-1 min-w-80">
@@ -271,12 +340,6 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
           {showQuickImport ? '✕ Fermer' : '⚡ Import rapide'}
         </button>
 
-        <button 
-          onClick={loadSqlTemplate}
-          className="px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl transition-all active:scale-95"
-        >
-          Charger exemple SQL
-        </button>
       </div>
 
       {/* QUICK IMPORT FORM */}
@@ -341,14 +404,14 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
                   
                   <input
                     value={objective.title}
-                    onChange={(e) => onSave({ ...objective, title: e.target.value })}
+                    onChange={(e) => debouncedSave({ ...objective, title: e.target.value })}
                     className="flex-1 min-w-64 text-lg font-bold text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-2 py-1 transition-colors"
                     placeholder="Titre de l'objectif"
                   />
                   
                   <input
                     value={objective.description}
-                    onChange={(e) => onSave({ ...objective, description: e.target.value })}
+                    onChange={(e) => debouncedSave({ ...objective, description: e.target.value })}
                     className="w-80 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                     placeholder="Description courte..."
                   />
@@ -460,7 +523,7 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
                         <td className="px-3 py-2 align-top">
                           <input
                             value={indicator.behavior}
-                            onChange={(e) => onSave({
+                            onChange={(e) => debouncedSave({
                               ...objective,
                               indicators: objective.indicators.map((entry) =>
                                 entry.id === indicator.id ? { ...entry, behavior: e.target.value } : entry
@@ -474,7 +537,7 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
                         <td className="px-3 py-2 align-top">
                           <textarea
                             value={indicator.conditions}
-                            onChange={(e) => onSave({
+                            onChange={(e) => debouncedSave({
                               ...objective,
                               indicators: objective.indicators.map((entry) =>
                                 entry.id === indicator.id ? { ...entry, conditions: e.target.value } : entry
@@ -489,7 +552,7 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
                         <td className="px-3 py-2 align-top">
                           <textarea
                             value={indicator.expectedResults}
-                            onChange={(e) => onSave({
+                            onChange={(e) => debouncedSave({
                               ...objective,
                               indicators: objective.indicators.map((entry) =>
                                 entry.id === indicator.id ? { ...entry, expectedResults: e.target.value } : entry
@@ -531,7 +594,7 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
                                 </span>
                                 <input
                                   value={indicator.remarks[points as keyof typeof indicator.remarks]}
-                                  onChange={(e) => onSave({
+                                  onChange={(e) => debouncedSave({
                                     ...objective,
                                     indicators: objective.indicators.map((entry) =>
                                       entry.id === indicator.id
@@ -637,6 +700,7 @@ export const ObjectivesView = ({ objectives, grids, onSave, onDelete, onReorder 
           )
         })}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

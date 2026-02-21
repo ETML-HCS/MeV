@@ -1,7 +1,130 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/db'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { ModuleTemplate, ObjectiveTemplate } from '../../types'
+
+const TemplateCard = ({ 
+  epTemplates, 
+  onEdit, 
+  onDelete 
+}: { 
+  epTemplates: ModuleTemplate[], 
+  onEdit: (t: ModuleTemplate) => void, 
+  onDelete: (id: string) => void 
+}) => {
+  const sortedTemplates = useMemo(() => {
+    return [...epTemplates].sort((a, b) => (b.version || 1) - (a.version || 1))
+  }, [epTemplates])
+
+  const [activeVersionId, setActiveVersionId] = useState(sortedTemplates[0].id)
+
+  useEffect(() => {
+    if (!sortedTemplates.find(t => t.id === activeVersionId)) {
+      setActiveVersionId(sortedTemplates[0].id)
+    }
+  }, [sortedTemplates, activeVersionId])
+
+  const activeTemplate = sortedTemplates.find(t => t.id === activeVersionId) || sortedTemplates[0]
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+      {sortedTemplates.length > 1 && (
+        <div className="flex border-b border-slate-200 bg-slate-50 px-2 pt-2 gap-1 overflow-x-auto rounded-t-xl">
+          {sortedTemplates.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveVersionId(t.id)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg border-t border-x transition-colors ${
+                activeVersionId === t.id
+                  ? 'bg-white border-slate-200 text-blue-700 border-b-transparent mb-[-1px]'
+                  : 'bg-transparent border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              v{t.version || 1}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      <div className="p-5 flex-1">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="font-bold text-slate-900 text-lg">
+              {activeTemplate.name}
+            </h3>
+            {activeTemplate.moduleNumber && activeTemplate.modulePrefix && activeTemplate.testIdentifier && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                {activeTemplate.id.startsWith('sys-') && (
+                  <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold">
+                    Système
+                  </span>
+                )}
+                <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
+                  {activeTemplate.modulePrefix}{activeTemplate.moduleNumber}
+                </span>
+                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[10px] font-bold">
+                  {activeTemplate.testIdentifier}
+                </span>
+                {activeTemplate.version && (
+                  <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold">
+                    v{activeTemplate.version}
+                  </span>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-slate-500 mt-1">
+              {activeTemplate.objectives.length} objectif{activeTemplate.objectives.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onEdit(activeTemplate)}
+              className="w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
+              title="Modifier"
+            >
+              ✏️
+            </button>
+            {!activeTemplate.id.startsWith('sys-') && (
+              <button
+                onClick={() => onDelete(activeTemplate.id)}
+                className="w-8 h-8 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
+                title="Supprimer"
+              >
+                🗑️
+              </button>
+            )}
+          </div>
+        </div>
+
+        {activeTemplate.description && (
+          <p className="text-sm text-slate-600 mb-3">{activeTemplate.description}</p>
+        )}
+
+        <div className="space-y-1.5">
+          {activeTemplate.objectives.map((obj: any) => (
+            <div key={obj.id} className="flex items-center gap-2 text-xs">
+              <span className="shrink-0 w-6 h-6 bg-slate-100 text-slate-600 rounded font-bold flex items-center justify-center">
+                O{obj.number}
+              </span>
+              <span className="flex-1 truncate text-slate-700" title={obj.title}>
+                {obj.title}
+              </span>
+              <span className="shrink-0 text-slate-400">×{obj.weight}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 mt-auto rounded-b-xl">
+        <div className="text-[10px] text-slate-500">
+          Mis à jour le {new Date(activeTemplate.updatedAt).toLocaleDateString('fr-FR')}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface TemplatesViewProps {
   onBack?: () => void
@@ -13,6 +136,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
   const [editingTemplate, setEditingTemplate] = useState<ModuleTemplate | null>(null)
   const [quickEntryMode, setQuickEntryMode] = useState(false)
   const [quickEntryText, setQuickEntryText] = useState('')
+  const [confirmFn, confirmDialogProps] = useConfirm()
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -137,11 +261,23 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
-      alert('Veuillez saisir un nom de module')
+      confirmFn({
+        title: 'Nom requis',
+        message: 'Veuillez saisir un nom de module.',
+        confirmLabel: 'OK',
+        variant: 'warning',
+        hideCancel: true,
+      })
       return
     }
     if (formData.objectives.length === 0) {
-      alert('Veuillez ajouter au moins un objectif')
+      confirmFn({
+        title: 'Objectifs requis',
+        message: 'Veuillez ajouter au moins un objectif.',
+        confirmLabel: 'OK',
+        variant: 'warning',
+        hideCancel: true,
+      })
       return
     }
 
@@ -181,6 +317,24 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
   }
 
   const templates = templatesQuery.data ?? []
+
+  // Grouper les templates par module
+  const groupedTemplates = useMemo(() => {
+    const groups = new Map<string, ModuleTemplate[]>()
+    
+    templates.forEach(template => {
+      const key = template.moduleNumber && template.modulePrefix
+        ? `${template.modulePrefix}${template.moduleNumber}`
+        : template.name
+        
+      if (!groups.has(key)) {
+        groups.set(key, [])
+      }
+      groups.get(key)!.push(template)
+    })
+    
+    return Array.from(groups.entries())
+  }, [templates])
 
   return (
     <section className="space-y-6">
@@ -445,75 +599,44 @@ Titre objectif 3"
       )}
 
       {/* LISTE DES TEMPLATES */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {templates.map((template) => (
-          <div key={template.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-bold text-slate-900 text-lg">{template.name}</h3>
-                  {template.moduleNumber && template.modulePrefix && template.testIdentifier && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
-                        {template.modulePrefix}{template.moduleNumber}
-                      </span>
-                      <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[10px] font-bold">
-                        {template.testIdentifier}
-                      </span>
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500 mt-1">
-                    {template.objectives.length} objectif{template.objectives.length > 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEdit(template)}
-                    className="w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
-                    title="Modifier"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Supprimer le squelette "${template.name}" ?`)) {
-                        deleteMutation.mutate(template.id)
-                      }
-                    }}
-                    className="w-8 h-8 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
-                    title="Supprimer"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+      <div className="space-y-8">
+        {groupedTemplates.map(([groupKey, groupTemplates]: [string, ModuleTemplate[]]) => {
+          // Sous-grouper par EP (testIdentifier)
+          const epGroups = new Map<string, ModuleTemplate[]>()
+          groupTemplates.forEach(t => {
+            const epKey = t.testIdentifier || 'default'
+            if (!epGroups.has(epKey)) epGroups.set(epKey, [])
+            epGroups.get(epKey)!.push(t)
+          })
 
-              {template.description && (
-                <p className="text-sm text-slate-600 mb-3">{template.description}</p>
-              )}
-
-              <div className="space-y-1.5">
-                {template.objectives.map((obj) => (
-                  <div key={obj.id} className="flex items-center gap-2 text-xs">
-                    <span className="shrink-0 w-6 h-6 bg-slate-100 text-slate-600 rounded font-bold flex items-center justify-center">
-                      O{obj.number}
-                    </span>
-                    <span className="flex-1 truncate text-slate-700" title={obj.title}>
-                      {obj.title}
-                    </span>
-                    <span className="shrink-0 text-slate-400">×{obj.weight}</span>
-                  </div>
+          return (
+            <div key={groupKey} className="space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">
+                {groupTemplates[0].moduleNumber && groupTemplates[0].modulePrefix
+                  ? `Module ${groupTemplates[0].modulePrefix}${groupTemplates[0].moduleNumber}`
+                  : groupKey}
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from(epGroups.entries()).map(([epKey, epTemplates]) => (
+                  <TemplateCard 
+                    key={epKey} 
+                    epTemplates={epTemplates} 
+                    onEdit={handleEdit} 
+                    onDelete={async (id) => {
+                      const ok = await confirmFn({
+                        title: 'Supprimer ce squelette ?',
+                        message: 'Cette action est irréversible.',
+                        confirmLabel: 'Supprimer',
+                        variant: 'danger',
+                      })
+                      if (ok) deleteMutation.mutate(id)
+                    }} 
+                  />
                 ))}
               </div>
             </div>
-
-            <div className="bg-slate-50 px-5 py-3 border-t border-slate-200">
-              <div className="text-[10px] text-slate-500">
-                Mis à jour le {new Date(template.updatedAt).toLocaleDateString('fr-FR')}
-              </div>
-            </div>
-          </div>
-        ))}
+          )
+        })}
 
         {templates.length === 0 && !isCreating && (
           <div className="col-span-full text-center py-12 bg-white rounded-xl border border-slate-200">
@@ -525,6 +648,8 @@ Titre objectif 3"
           </div>
         )}
       </div>
+
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

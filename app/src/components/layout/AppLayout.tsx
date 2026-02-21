@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AppTab, EvaluationProject } from '../../types'
 import { parseProjectName } from '../../utils/helpers'
+import { useClickOutside } from '../../hooks/useClickOutside'
 
 interface AppLayoutProps {
    activeTab: AppTab
@@ -68,6 +69,8 @@ export const AppLayout = ({
    children,
 }: AppLayoutProps) => {
    const [showQuickAccessMenu, setShowQuickAccessMenu] = useState(false)
+   const quickMenuRef = useRef<HTMLDivElement>(null)
+   useClickOutside(quickMenuRef, useCallback(() => setShowQuickAccessMenu(false), []), showQuickAccessMenu)
    const activeIndex = workflowTabsEnhanced.findIndex(t => t.id === activeTab)
    const activeTabMeta = workflowTabsEnhanced.find(t => t.id === activeTab) || tabs.find(t => t.id === activeTab)
 
@@ -236,7 +239,7 @@ export const AppLayout = ({
 
                            {/* Quick Access Dropdown Menu */}
                            {tab.id === 'evaluation' && showQuickAccessMenu && (
-                              <div className="absolute left-full top-0 ml-2 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+                              <div ref={quickMenuRef} className="absolute left-full top-0 ml-2 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
                                  <button
                                     onClick={() => {
                                        onOpenPseudo?.()

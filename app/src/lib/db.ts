@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type { AppSettings, EvaluationProject, Student, Objective, StudentGrid, ModuleTemplate, EvaluationTemplate } from '../types'
 import { DEFAULT_CORRECTION_ERROR, DEFAULT_THRESHOLD } from '../utils/constants'
 import { parseModuleInfo } from '../utils/helpers'
+import { defaultModuleTemplates } from '../data/squelette_dep'
 
 // Vérifier que nous sommes dans Electron
 const isElectron = typeof window !== 'undefined' && (window as any).electronAPI
@@ -57,16 +58,16 @@ export const defaultSettings: AppSettings = {
   classAverage: 4,
   threshold: DEFAULT_THRESHOLD,
   correctionError: DEFAULT_CORRECTION_ERROR,
-  moduleName: 'Module ETML',
+  moduleName: '',
   testIdentifier: '',
   testType: 'sommatif',
-  moduleDescription: "Grille d'évaluation",
+  moduleDescription: '',
   correctedBy: '',
   showObjectives: true,
   studentTabsLocked: false,
   maxQuestionsToAnswer: null,
   testDate: new Date().toISOString().split('T')[0],
-  schoolName: 'ETML / CFPV',
+  schoolName: '',
 }
 
 export const getSettings = async (): Promise<AppSettings> => {
@@ -123,7 +124,7 @@ export const createProject = async (
     settings: { 
       ...defaultSettings,
       moduleName: name,
-      testIdentifier: 'EP1',
+      moduleDescription: description || '',
     },
     students: [],
     objectives: [],
@@ -250,32 +251,9 @@ export const createEvaluation = async (baseProjectId: string): Promise<Evaluatio
     }
   }
 
-  // Chercher un squelette correspondant (toujours dans Dexie car les templates n'y sont que là pour l'instant)
-  if (newEvaluation.moduleNumber && newEvaluation.modulePrefix) {
-    const template = await dexieDb.moduleTemplates
-      .where('[modulePrefix+moduleNumber+testIdentifier]')
-      .equals([newEvaluation.modulePrefix, newEvaluation.moduleNumber, newEvaluation.settings.testIdentifier])
-      .first()
-
-    if (template) {
-      newEvaluation.objectives = template.objectives.map(obj => ({
-        id: crypto.randomUUID(),
-        number: obj.number,
-        title: obj.title,
-        description: obj.description,
-        weight: obj.weight,
-        indicators: []
-      }))
-    }
-  }
-
-  if (ensureAPI()) {
-    try {
-      await api.updateProject(newEvaluation)
-    } catch (e) {
-      console.error('Electron API error, falling back to Dexie:', e)
-    }
-  } else {
+  // En mode Dexie (browser), on doit sauvegarder séparément
+  // En mode Electron, createEvaluation a déjà inséré le projet en DB
+  if (!ensureAPI()) {
     await dexieDb.projects.add(newEvaluation)
   }
 
@@ -291,16 +269,42 @@ export interface DatabaseExport {
 }
 
 export const exportDatabase = async (): Promise<string> => {
-  ensureAPI()
-  return await api.exportDatabase()
+  if (ensureAPI()) {
+    return await api.exportDatabase()
+  }
+  // Fallback browser : exporter depuis Dexie
+  const projects = await dexieDb.projects.toArray()
+  const found = await dexieDb.settings.get('main')
+  return JSON.stringify({
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects,
+    settings: found?.value ?? defaultSettings,
+  }, null, 2)
 }
 
 export const importDatabase = async (
   jsonData: string,
   options: { merge: boolean } = { merge: false },
 ): Promise<void> => {
-  ensureAPI()
-  await api.importDatabase(jsonData, options.merge)
+  if (ensureAPI()) {
+    await api.importDatabase(jsonData, options.merge)
+    return
+  }
+  // Fallback browser : importer dans Dexie
+  const data = JSON.parse(jsonData)
+  if (!data.projects || !Array.isArray(data.projects)) {
+    throw new Error('Fichier de sauvegarde invalide')
+  }
+  if (!options.merge) {
+    await dexieDb.projects.clear()
+  }
+  for (const project of data.projects) {
+    await dexieDb.projects.put(project)
+  }
+  if (!options.merge && data.settings) {
+    await dexieDb.settings.put({ key: 'main', value: data.settings })
+  }
 }
 
 export const downloadBackup = async (jsonData: string, filename?: string): Promise<void> => {
@@ -681,7 +685,7 @@ export const db = {
       }
       return await dexieDb.grids.delete(id)
     },
-    find: (_predicate: (grid: StudentGrid) => boolean): StudentGrid | undefined => undefined,
+    find: undefined as any, // Not used — grids.find() is called on arrays, not on db.grids
   },
   settings: {
     get: async (key: string): Promise<{ key: string; value: AppSettings } | undefined> => {
@@ -867,4 +871,18 @@ export const db = {
     }
     return await dexieDb.transaction(_mode as any, _tables, callback)
   },
+}
+
+export const initDb = async () => {
+  try {
+    // Inject default module templates if they don't exist
+    for (const template of defaultModuleTemplates) {
+      const existing = await db.moduleTemplates.get(template.id)
+      if (!existing) {
+        await db.moduleTemplates.add(template)
+      }
+    }
+  } catch (error) {
+    console.error('Failed to initialize database:', error)
+  }
 }

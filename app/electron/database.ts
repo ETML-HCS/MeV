@@ -127,16 +127,16 @@ function initDefaultSettings(): void {
       classAverage: 4,
       threshold: DEFAULT_THRESHOLD,
       correctionError: DEFAULT_CORRECTION_ERROR,
-      moduleName: 'Module ETML',
+      moduleName: '',
       testIdentifier: '',
       testType: 'sommatif',
-      moduleDescription: "Grille d'évaluation",
+      moduleDescription: '',
       correctedBy: '',
       showObjectives: true,
       studentTabsLocked: false,
       maxQuestionsToAnswer: null,
       testDate: new Date().toISOString().split('T')[0],
-      schoolName: 'ETML / CFPV',
+      schoolName: '',
     }
 
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
@@ -157,7 +157,25 @@ export function getSettings(): AppSettings {
     throw new Error('Settings not found')
   }
 
-  return JSON.parse(row.value)
+  // Merge avec les defaults pour garantir que les nouveaux champs sont présents
+  // même sur d'anciens enregistrements DB
+  const defaultSettings: AppSettings = {
+    classAverage: 4,
+    threshold: DEFAULT_THRESHOLD,
+    correctionError: DEFAULT_CORRECTION_ERROR,
+    moduleName: '',
+    testIdentifier: '',
+    testType: 'sommatif',
+    moduleDescription: '',
+    correctedBy: '',
+    showObjectives: true,
+    studentTabsLocked: false,
+    maxQuestionsToAnswer: null,
+    testDate: new Date().toISOString().split('T')[0],
+    schoolName: '',
+  }
+
+  return { ...defaultSettings, ...JSON.parse(row.value) }
 }
 
 export function setSettings(settings: AppSettings): void {
@@ -288,9 +306,23 @@ export function createProject(name: string, description: string = ''): Evaluatio
   const modulePrefix = moduleMatch && moduleMatch[1]
     ? (moduleMatch[1].trim() as 'I' | 'C')
     : null
-  const weightPercentage = modulePrefix === 'I' ? 80 : modulePrefix === 'C' ? 20 : null
+  const weightPercentage = modulePrefix === 'I' ? 0.8 : modulePrefix === 'C' ? 0.2 : null
 
-  const defaultSettings = getSettings()
+  const cleanDefaultSettings: AppSettings = {
+    classAverage: 4,
+    threshold: DEFAULT_THRESHOLD,
+    correctionError: DEFAULT_CORRECTION_ERROR,
+    moduleName: name,
+    testIdentifier: '',
+    testType: 'sommatif',
+    moduleDescription: description || '',
+    correctedBy: '',
+    showObjectives: true,
+    studentTabsLocked: false,
+    maxQuestionsToAnswer: null,
+    testDate: new Date().toISOString().split('T')[0],
+    schoolName: '',
+  }
 
   const project: EvaluationProject = {
     id: crypto.randomUUID(),
@@ -298,11 +330,7 @@ export function createProject(name: string, description: string = ''): Evaluatio
     description,
     createdAt: new Date(),
     updatedAt: new Date(),
-    settings: {
-      ...defaultSettings,
-      moduleName: name,
-      testIdentifier: 'EP1',
-    },
+    settings: cleanDefaultSettings,
     students: [],
     objectives: [],
     grids: [],
@@ -371,7 +399,7 @@ export function duplicateProject(id: string): EvaluationProject {
   const copy: EvaluationProject = {
     ...source,
     id: crypto.randomUUID(),
-    name: `${source.name} (Copie)`,
+    name: `${source.name} (copie)`,
     createdAt: new Date(),
     updatedAt: new Date(),
   }

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createProject, deleteProject, duplicateProject, getProjects, updateProject, createEvaluation, downloadProjectBackup, downloadAllProjectsBackup, db } from '../../lib/db'
 import { parseProjectName, getModuleCardColors } from '../../utils/helpers'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 
 interface ProjectsListViewProps {
   onSelectProject: (projectId: string) => void
@@ -18,6 +20,8 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   const [editingProjectName, setEditingProjectName] = useState('')
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting'>('idle')
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [confirm, confirmDialogProps] = useConfirm()
 
   const projectsQuery = useQuery({
     queryKey: ['projects'],
@@ -119,10 +123,14 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     await createMutation.mutateAsync()
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette évaluation ?')) {
-      deleteMutation.mutate(id)
-    }
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: 'Supprimer l\'\u00e9valuation',
+      message: '\u00cates-vous s\u00fbr de vouloir supprimer cette \u00e9valuation ?\n\nCette action est irr\u00e9versible.',
+      confirmLabel: 'Supprimer',
+      variant: 'danger',
+    })
+    if (ok) deleteMutation.mutate(id)
   }
 
   const handleDuplicate = (id: string) => {
@@ -221,13 +229,32 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
 
   // Trier les groupes : C, I, Numérique, Autres
   const groupOrder = { 'C': 1, 'I': 2, 'Numérique': 3, 'Autres': 4 }
-  const sortedGroups = Object.keys(groupedModules).sort((a, b) => {
+
+  // Filtrer les modules par recherche
+  const filteredGroupedModules = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return groupedModules
+    const filtered: Record<string, typeof modulesByName> = {}
+    Object.entries(groupedModules).forEach(([group, modules]) => {
+      const matching = modules.filter(m =>
+        m.name.toLowerCase().includes(q) ||
+        m.evaluations.some(e =>
+          (e.settings.testIdentifier || '').toLowerCase().includes(q) ||
+          (e.description || '').toLowerCase().includes(q)
+        )
+      )
+      if (matching.length > 0) filtered[group] = matching
+    })
+    return filtered
+  }, [groupedModules, searchQuery])
+
+  const sortedGroups = Object.keys(filteredGroupedModules).sort((a, b) => {
     return groupOrder[a as keyof typeof groupOrder] - groupOrder[b as keyof typeof groupOrder]
   })
 
   // Trier les modules à l'intérieur de chaque groupe par ordre alphabétique
   sortedGroups.forEach(group => {
-    groupedModules[group].sort((a, b) => a.name.localeCompare(b.name))
+    filteredGroupedModules[group].sort((a, b) => a.name.localeCompare(b.name))
   })
 
   return (
@@ -240,7 +267,19 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               <h1 className="text-xl font-bold text-white tracking-tight">Module d'Évaluation</h1>
               <p className="text-xs text-slate-400 mt-0.5">{projects.length} évaluation{projects.length !== 1 ? 's' : ''} enregistrée{projects.length !== 1 ? 's' : ''}</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* Search */}
+              <div className="relative">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filtrer..."
+                  className="w-40 pl-8 pr-3 py-2 bg-white/10 border border-white/20 text-white text-xs rounded-lg placeholder-slate-400 focus:bg-white/20 focus:border-white/40 focus:outline-none transition-all"
+                />
+              </div>
               <button
                 onClick={onOpenTemplates}
                 title="Squelettes de projets"
@@ -368,13 +407,13 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                    'Autres évaluations'}
                 </h2>
                 <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
-                  {groupedModules[groupType].length}
+                  {filteredGroupedModules[groupType].length}
                 </span>
               </div>
 
               {/* Projects Grid for this module */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {groupedModules[groupType].map((module) => {
+                {filteredGroupedModules[groupType].map((module) => {
             const parsed = module.parsed
             const cardColors = getModuleCardColors(parsed.groupType)
 
@@ -420,10 +459,13 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                       <div className="flex items-start justify-between gap-2">
                         <h3
                           onClick={() => handleStartEdit(module.name)}
-                          className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 cursor-pointer transition-colors flex-1"
+                          className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 cursor-pointer transition-colors flex-1 group/edit flex items-center gap-1.5"
                           title="Cliquer pour éditer le nom"
                         >
-                          {module.name}
+                          <span className="truncate">{module.name}</span>
+                          <svg className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover/edit:opacity-100 transition-opacity shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </h3>
                       </div>
                       <div className="flex items-center gap-1 flex-wrap">
@@ -461,7 +503,11 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
 
               {/* Evaluations List */}
               <div className="border-t border-slate-200/60 bg-white/50 rounded-b-xl p-2 space-y-1">
-                {module.evaluations.map(evaluation => (
+                {module.evaluations.map(evaluation => {
+                  const validGrids = evaluation.grids.filter(g => evaluation.students.some(s => s.id === g.studentId));
+                  const completedCount = validGrids.filter(g => g.completedAt).length;
+                  
+                  return (
                   <div key={evaluation.id} className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200 hover:shadow-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-700 w-8">
@@ -469,7 +515,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                       </span>
                       <div className="flex gap-2 text-[10px] text-slate-500">
                         <span title="Élèves">{evaluation.students.length} <svg className="w-3 h-3 inline -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></span>
-                        <span title="Évaluations">{evaluation.grids.length} <svg className="w-3 h-3 inline -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg></span>
+                        <span title="Évaluations terminées">{completedCount}/{evaluation.students.length} <svg className="w-3 h-3 inline -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg></span>
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -511,7 +557,8 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                       </button>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
                 
                 {/* Add new evaluation button */}
                 <button
@@ -532,6 +579,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
           ))}
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

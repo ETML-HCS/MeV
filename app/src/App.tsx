@@ -17,7 +17,7 @@ import { useEvaluation } from './hooks/useEvaluation'
 import { useObjectives } from './hooks/useObjectives'
 import { useStudents } from './hooks/useStudents'
 import { calculateFinalGrade, calculateGridTotals } from './lib/calculations'
-import { db, getProject, getProjects, getSettings, setSettings, updateProject, recordUserEvaluation } from './lib/db'
+import { db, getProject, getProjects, getSettings, setSettings, updateProject, recordUserEvaluation, initDb } from './lib/db'
 import { generateBatchZip } from './lib/pdf-generator'
 import { useAppStore } from './stores/useAppStore'
 import { useUserStore } from './stores/useUserStore'
@@ -36,7 +36,7 @@ function App() {
   const { user, initializeUser } = useUserStore()
 
   const { students, replaceAll, saveStudent } = useStudents()
-  const { objectives, upsert, remove, reorder } = useObjectives()
+  const { objectives, upsert, remove, reorder, replaceAll: replaceAllObjectives } = useObjectives()
   const { grid, saveGrid, markAsCompleted, markAsIncomplete, updateTestDateOverride, saveStatus } = useEvaluation(selectedStudentId, objectives)
 
   const gridsQuery = useQuery({
@@ -80,6 +80,7 @@ function App() {
   // Initialiser l'utilisateur au démarrage
   useEffect(() => {
     const init = async () => {
+      await initDb()
       await initializeUser()
       // Afficher le modal si aucun utilisateur n'est connecté
       // On laisse cocher la case première utilisation dans le localStorage
@@ -97,7 +98,8 @@ function App() {
     if (user && !settings.correctedBy.trim()) {
       setSettingsStore({ ...settings, correctedBy: user.initials })
     }
-  }, [user?.initials, settings, settings.correctedBy, setSettingsStore])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.initials, settings.correctedBy])
 
   // Quand on ouvre un projet, charger ses données dans la DB (une seule fois par ouverture)
   useEffect(() => {
@@ -116,35 +118,52 @@ function App() {
         db.grids.clear().then(() => db.grids.bulkAdd(project.grids)),
       ]).then(() => setSettings(project.settings)).then(() => {
         setSettingsStore(project.settings)
-        hydratedProjectIdRef.current = activeProjectId
+        
+        // Mettre à jour la référence de snapshot AVANT de déclencher les requêtes
+        // pour éviter que le useEffect de sauvegarde ne se déclenche avec des données obsolètes
         lastSavedSnapshotRef.current = JSON.stringify({
           projectId: activeProjectId,
           students: project.students,
           objectives: project.objectives,
           settings: project.settings,
         })
-        queryClient.invalidateQueries({ queryKey: ['students'] })
-        queryClient.invalidateQueries({ queryKey: ['objectives'] })
-        queryClient.invalidateQueries({ queryKey: ['grids'] })
-        queryClient.invalidateQueries({ queryKey: ['grid'] })
+        
+        // Invalider les requêtes pour forcer le rechargement depuis la DB locale
+        return Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['students'] }),
+          queryClient.invalidateQueries({ queryKey: ['objectives'] }),
+          queryClient.invalidateQueries({ queryKey: ['grids'] }),
+          queryClient.invalidateQueries({ queryKey: ['grid'] })
+        ])
+      }).then(() => {
+        // Seulement après que les requêtes ont été invalidées et rechargées,
+        // on marque le projet comme hydraté. Cela empêche le useEffect de sauvegarde
+        // de s'exécuter avec les anciennes données du cache React Query.
+        hydratedProjectIdRef.current = activeProjectId
       })
     }
-  }, [activeProjectId, projectQuery.data, user])
+  }, [activeProjectId, projectQuery.data, user, queryClient, setSettingsStore])
 
   // Sauvegarder le projet quand les données changent
   useEffect(() => {
     if (activeProjectId && projectQuery.data) {
+      // Ne pas sauvegarder si le projet n'est pas encore hydraté
       if (hydratedProjectIdRef.current !== activeProjectId) return
+      
+      const currentGrids = gridsQuery.data ?? []
       const snapshot = JSON.stringify({
         projectId: activeProjectId,
         students,
         objectives,
         settings,
+        gridsHash: currentGrids.map(g => `${g.studentId}:${g.finalGrade}:${g.completedAt}`).join(','),
       })
+      
+      // Ne pas sauvegarder si les données n'ont pas changé
       if (snapshot === lastSavedSnapshotRef.current) return
 
       const timer = setTimeout(async () => {
-        if (projectQuery.data) {
+        if (projectQuery.data && hydratedProjectIdRef.current === activeProjectId) {
           await saveProjectMutation.mutateAsync({
             id: projectQuery.data.id,
             name: projectQuery.data.name,
@@ -164,7 +183,7 @@ function App() {
       }, 1500)
       return () => clearTimeout(timer)
     }
-  }, [students, objectives, settings, activeProjectId])
+  }, [students, objectives, settings, activeProjectId, gridsQuery.data])
 
   const handleOpenProject = (projectId: string) => {
     hydratedProjectIdRef.current = null
@@ -401,6 +420,9 @@ function App() {
           grids={grids}
           settings={settings}
           onUpdateSettings={persistSettings}
+          onApplyTemplate={async (templateObjectives) => {
+            await replaceAllObjectives.mutateAsync(templateObjectives)
+          }}
           onCreateStudents={async (studentList) => {
             // Créer uniquement les nouveaux élèves (sans remplacer les existants)
             for (const entry of studentList) {
@@ -433,6 +455,7 @@ function App() {
 
       {activeTab === 'objectives' && (
         <ObjectivesView
+          project={projectQuery.data}
           objectives={objectives}
           grids={grids}
           onSave={async (objective) => {

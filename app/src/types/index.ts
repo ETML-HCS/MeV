@@ -48,6 +48,7 @@ export interface ModuleTemplate {
   moduleNumber?: string | null // Ex: "164"
   modulePrefix?: 'I' | 'C' | null // Ex: "I"
   testIdentifier?: string // Ex: "EP1"
+  version?: number // Ex: 1, 2, 3
   objectives: ObjectiveTemplate[]
   createdAt: Date
   updatedAt: Date

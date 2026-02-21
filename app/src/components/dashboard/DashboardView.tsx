@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { calculateGridTotals } from '../../lib/calculations'
 import { exportDatabase, importDatabase, downloadBackup } from '../../lib/db'
+import { defaultModuleTemplates } from '../../data/squelette_dep'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { AppSettings, Objective, Student, StudentGrid, Evaluation } from '../../types'
 
 const MIN_ROWS = 20
@@ -23,6 +26,7 @@ interface DashboardViewProps {
    grids: StudentGrid[]
    settings: AppSettings
    onUpdateSettings: (next: AppSettings) => void
+   onApplyTemplate: (objectives: Objective[]) => Promise<void>
    onCreateStudents: (students: { lastname: string; firstname: string }[]) => Promise<void>
    testType: 'formatif' | 'sommatif'
 }
@@ -33,6 +37,7 @@ export const DashboardView = ({
    grids,
    settings,
    onUpdateSettings,
+   onApplyTemplate,
    onCreateStudents,
    testType,
 }: DashboardViewProps) => {
@@ -44,6 +49,7 @@ export const DashboardView = ({
    const [showQuickImport, setShowQuickImport] = useState(false)
    const [backupStatus, setBackupStatus] = useState<'idle' | 'exporting' | 'importing' | 'success' | 'error'>('idle')
    const [backupMessage, setBackupMessage] = useState('')
+   const [confirm, confirmDialogProps] = useConfirm()
 
    // Fonctions de sauvegarde/restauration
    const handleExportBackup = async () => {
@@ -101,16 +107,24 @@ export const DashboardView = ({
       input.click()
    }
 
-   const handleRestoreBackup = () => {
-      if (confirm('ATTENTION : Cette action remplacera toutes vos données actuelles par celles du fichier de sauvegarde.\n\nVoulez-vous continuer ?')) {
-         handleImportBackup(false)
-      }
+   const handleRestoreBackup = async () => {
+      const ok = await confirm({
+         title: 'Restaurer les données',
+         message: 'ATTENTION : Cette action remplacera toutes vos données actuelles par celles du fichier de sauvegarde.\n\nVoulez-vous continuer ?',
+         confirmLabel: 'Restaurer',
+         variant: 'danger',
+      })
+      if (ok) handleImportBackup(false)
    }
 
-   const handleMergeBackup = () => {
-      if (confirm('Cette action fusionnera les données du fichier avec vos données actuelles.\n\nContinuer ?')) {
-         handleImportBackup(true)
-      }
+   const handleMergeBackup = async () => {
+      const ok = await confirm({
+         title: 'Fusionner les données',
+         message: 'Cette action fusionnera les données du fichier avec vos données actuelles.\n\nContinuer ?',
+         confirmLabel: 'Fusionner',
+         variant: 'warning',
+      })
+      if (ok) handleImportBackup(true)
    }
 
    // Fonctions de gestion des élèves
@@ -126,8 +140,14 @@ export const DashboardView = ({
       }
    }
 
-   const clearAllStudents = () => {
-      if (confirm('Êtes-vous sûr de vouloir supprimer tous les élèves ?')) {
+   const clearAllStudents = async () => {
+      const ok = await confirm({
+         title: 'Vider la liste',
+         message: 'Êtes-vous sûr de vouloir supprimer tous les élèves ?',
+         confirmLabel: 'Vider tous',
+         variant: 'danger',
+      })
+      if (ok) {
          setStudentInputs(Array.from({ length: MIN_ROWS }, () => ({ lastname: '', firstname: '' })))
          setIsStudentInputClosed(false)
       }
@@ -286,6 +306,60 @@ export const DashboardView = ({
          note5: (totalNote5 / count).toFixed(1)
       };
    }, [displayedStudentInputs, students, grids]);
+
+   // Détection du module pour proposer un squelette
+   const moduleMatch = settings.moduleName.match(/(\d{3})/) || settings.testIdentifier.match(/(\d{3})/);
+   const moduleNumber = moduleMatch ? moduleMatch[1] : null;
+   
+   const availableTemplates = useMemo(() => {
+      if (!moduleNumber) return [];
+      return defaultModuleTemplates.filter(t => t.moduleNumber === moduleNumber);
+   }, [moduleNumber]);
+
+   const handleApplyTemplate = async (templateId: string) => {
+      const template = defaultModuleTemplates.find(t => t.id === templateId);
+      if (!template) return;
+      
+      if (objectives.length > 0) {
+         const ok = await confirm({
+            title: 'Remplacer les objectifs',
+            message: `L'application de ce squelette va remplacer les ${objectives.length} objectifs actuels. Voulez-vous continuer ?`,
+            confirmLabel: 'Remplacer',
+            variant: 'warning',
+         })
+         if (!ok) return
+      }
+      
+      // Créer de nouveaux objectifs avec des IDs uniques
+      const newObjectives = template.objectives.map(obj => ({
+         ...obj,
+         id: crypto.randomUUID(),
+         indicators: []
+      }));
+      
+      await onApplyTemplate(newObjectives);
+      
+      // Mettre à jour les paramètres si vides
+      const newSettings = { ...settings };
+      let settingsChanged = false;
+      
+      if (!settings.moduleName.trim() && template.name) {
+         newSettings.moduleName = template.name;
+         settingsChanged = true;
+      }
+      if (!settings.moduleDescription.trim() && template.description) {
+         newSettings.moduleDescription = template.description;
+         settingsChanged = true;
+      }
+      if (!settings.testIdentifier.trim() && template.testIdentifier) {
+         newSettings.testIdentifier = template.testIdentifier;
+         settingsChanged = true;
+      }
+      
+      if (settingsChanged) {
+         onUpdateSettings(newSettings);
+      }
+   };
 
    return (
       <section className="space-y-6">
@@ -458,6 +532,30 @@ export const DashboardView = ({
                   </div>
                </div>
 
+               {/* Squelettes disponibles */}
+               {availableTemplates.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Squelettes disponibles pour le module {moduleNumber}
+                     </label>
+                     <div className="flex flex-wrap gap-2">
+                        {availableTemplates.map(template => (
+                           <button
+                              key={template.id}
+                              onClick={() => handleApplyTemplate(template.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border border-blue-200 rounded-md text-xs font-medium transition-colors"
+                              title={template.name}
+                           >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                              </svg>
+                              dep-{template.moduleNumber}-{(template.testIdentifier ?? '').toLowerCase()}-v{template.version}
+                           </button>
+                        ))}
+                     </div>
+                  </div>
+               )}
+
                {/* Ligne 2 — Description + Paramètres numériques */}
                <div className="grid grid-cols-1 gap-3 items-end mt-3 md:grid-cols-[1fr_auto_auto_auto]">
                   <div>
@@ -569,7 +667,7 @@ export const DashboardView = ({
                               : 'bg-orange-600 hover:bg-orange-700 focus-visible:ring-orange-200'
                         }`}
                      >
-                        Fermer la saisie élèves
+                        Valider la liste des élèves
                      </button>
                   </div>
                </div>
@@ -701,6 +799,7 @@ export const DashboardView = ({
                </div>
             </div>
          </div>
+         <ConfirmDialog {...confirmDialogProps} />
       </section>
    )
 }

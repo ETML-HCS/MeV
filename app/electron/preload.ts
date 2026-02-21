@@ -52,13 +52,13 @@ const electronAPI = {
   getGrids: () => ipcRenderer.invoke('db:getGrids'),
   getGrid: (studentId: string) => ipcRenderer.invoke('db:getGrid', studentId),
   saveGrid: (grid: StudentGrid, projectId?: string) => ipcRenderer.invoke('db:saveGrid', grid, projectId),
-  bulkAddGrids: (grids: StudentGrid[]) => ipcRenderer.invoke('db:bulkAddGrids', grids),
-  bulkPutGrids: (grids: StudentGrid[]) => ipcRenderer.invoke('db:bulkPutGrids', grids),
+  bulkAddGrids: (grids: StudentGrid[], projectId?: string) => ipcRenderer.invoke('db:bulkAddGrids', grids, projectId),
+  bulkPutGrids: (grids: StudentGrid[], projectId?: string) => ipcRenderer.invoke('db:bulkPutGrids', grids, projectId),
   clearGrids: () => ipcRenderer.invoke('db:clearGrids'),
-  markGridAsCompleted: (studentId: string) =>
-    ipcRenderer.invoke('db:markGridAsCompleted', studentId),
-  markGridAsIncomplete: (studentId: string) =>
-    ipcRenderer.invoke('db:markGridAsIncomplete', studentId),
+  markGridAsCompleted: (studentId: string, projectId?: string) =>
+    ipcRenderer.invoke('db:markGridAsCompleted', studentId, projectId),
+  markGridAsIncomplete: (studentId: string, projectId?: string) =>
+    ipcRenderer.invoke('db:markGridAsIncomplete', studentId, projectId),
 
   // Backup & Restore
   exportDatabase: () => ipcRenderer.invoke('db:export'),

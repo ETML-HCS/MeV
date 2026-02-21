@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { parseLoginWorkbook } from '../../lib/excel-utils'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { Student } from '../../types'
 
 interface StudentsViewProps {
@@ -11,6 +13,7 @@ interface StudentsViewProps {
 export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: StudentsViewProps) => {
   const [isImporting, setIsImporting] = useState(false)
   const [search, setSearch] = useState('')
+  const [confirm, confirmDialogProps] = useConfirm()
 
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase()
@@ -26,6 +29,16 @@ export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: Studen
     setIsImporting(true)
     try {
       const parsed = await parseLoginWorkbook(file)
+      if (students.length > 0) {
+        const ok = await confirm({
+          title: 'Remplacer la liste des élèves ?',
+          message: `L'import va remplacer les ${students.length} élève(s) actuels par ${parsed.length} nouveaux élèves. Les évaluations existantes seront conservées mais pourraient ne plus correspondre.`,
+          confirmLabel: 'Remplacer',
+          cancelLabel: 'Annuler',
+          variant: 'warning',
+        })
+        if (!ok) return
+      }
       await onReplaceAll(parsed)
     } finally {
       setIsImporting(false)
@@ -157,6 +170,8 @@ export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: Studen
           </div>
         )}
       </div>
+
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

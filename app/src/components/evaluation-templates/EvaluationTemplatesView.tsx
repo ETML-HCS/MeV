@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/db'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { EvaluationTemplate } from '../../types'
 
 interface EvaluationTemplatesViewProps {
@@ -10,6 +12,7 @@ interface EvaluationTemplatesViewProps {
 export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps) => {
   const queryClient = useQueryClient()
   const [selectedTemplate, setSelectedTemplate] = useState<EvaluationTemplate | null>(null)
+  const [confirmFn, confirmDialogProps] = useConfirm()
 
   // Charger les templates
   const templatesQuery = useQuery({
@@ -20,7 +23,6 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
   // Supprimer un template
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!confirm('Êtes-vous sûr de vouloir supprimer ce template ?')) return
       await db.evaluationTemplates.delete(id)
     },
     onSuccess: () => {
@@ -29,8 +31,14 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
     },
   })
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id)
+  const handleDelete = async (id: string) => {
+    const ok = await confirmFn({
+      title: 'Supprimer ce template ?',
+      message: 'Cette action est irréversible.',
+      confirmLabel: 'Supprimer',
+      variant: 'danger',
+    })
+    if (ok) deleteMutation.mutate(id)
   }
 
   const templates = templatesQuery.data ?? []
@@ -183,6 +191,8 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
           </div>
         ))}
       </div>
+
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

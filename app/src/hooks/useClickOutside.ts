@@ -1,0 +1,22 @@
+import { useEffect, type RefObject } from 'react'
+
+/**
+ * Hook that calls `handler` when a click occurs outside the referenced element.
+ */
+export function useClickOutside<T extends HTMLElement = HTMLElement>(
+  ref: RefObject<T | null>,
+  handler: () => void,
+  enabled: boolean = true,
+) {
+  useEffect(() => {
+    if (!enabled) return
+
+    const listener = (event: MouseEvent) => {
+      if (!ref.current || ref.current.contains(event.target as Node)) return
+      handler()
+    }
+
+    document.addEventListener('mousedown', listener)
+    return () => document.removeEventListener('mousedown', listener)
+  }, [ref, handler, enabled])
+}

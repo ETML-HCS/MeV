@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { calculateGridTotals } from '../../lib/calculations'
 import { db } from '../../lib/db'
+import { useConfirm } from '../../hooks/useConfirm'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { AppSettings, Objective, EvaluationTemplate } from '../../types'
 
 interface MasterGridViewProps {
@@ -34,6 +36,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [templateDescription, setTemplateDescription] = useState('')
+  const [confirmFn, confirmDialogProps] = useConfirm()
   const { maxPoints } = calculateGridTotals(objectives, [])
   const totalIndicators = objectives.reduce((sum, objective) => sum + objective.indicators.length, 0)
 
@@ -64,17 +67,34 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
       setShowSaveTemplateModal(false)
       setTemplateName('')
       setTemplateDescription('')
-      alert('✅ Grille sauvegardée comme template !')
+      confirmFn({
+        title: 'Template sauvegardé',
+        message: 'La grille a été sauvegardée comme template avec succès.',
+        confirmLabel: 'OK',
+        hideCancel: true,
+      })
     },
   })
 
   const handleSaveAsTemplate = () => {
     if (!templateName.trim()) {
-      alert('Veuillez saisir un nom pour le template')
+      confirmFn({
+        title: 'Nom requis',
+        message: 'Veuillez saisir un nom pour le template.',
+        confirmLabel: 'OK',
+        variant: 'warning',
+        hideCancel: true,
+      })
       return
     }
     if (objectives.length === 0) {
-      alert('La grille est vide, rien à sauvegarder')
+      confirmFn({
+        title: 'Grille vide',
+        message: 'La grille est vide, rien à sauvegarder.',
+        confirmLabel: 'OK',
+        variant: 'warning',
+        hideCancel: true,
+      })
       return
     }
 
@@ -431,6 +451,8 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
           </div>
         </div>
       )}
+
+      <ConfirmDialog {...confirmDialogProps} />
     </section>
   )
 }

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useUserStore } from '../../stores/useUserStore'
+import { useClickOutside } from '../../hooks/useClickOutside'
 
 interface ProfileBadgeProps {
   onLoginClick: () => void
@@ -10,6 +11,8 @@ interface ProfileBadgeProps {
 export const ProfileBadge = ({ onLoginClick, onEditClick, saveStatus }: ProfileBadgeProps) => {
   const { user, logout } = useUserStore()
   const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useClickOutside(menuRef, useCallback(() => setShowMenu(false), []), showMenu)
   const [preferredView, setPreferredView] = useState<'objectives' | 'questions'>(() => {
     if (typeof window === 'undefined') return 'objectives'
     const stored = window.localStorage.getItem('mev-evaluation-view-mode')
@@ -86,7 +89,7 @@ export const ProfileBadge = ({ onLoginClick, onEditClick, saveStatus }: ProfileB
 
   // Sinon, afficher le menu utilisateur classique
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <button
         onClick={() => setShowMenu(!showMenu)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-all"

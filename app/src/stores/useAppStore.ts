@@ -36,7 +36,8 @@ export const useAppStore = create<AppUiState>()(
         activeProjectId: state.activeProjectId,
         academicYear: state.academicYear,
         selectedStudentId: state.selectedStudentId,
-        settings: state.settings,
+        // NOTE: settings volontairement exclues du persist
+        // pour éviter le bleed entre projets au redémarrage
       }),
     },
   ),
