@@ -5,6 +5,33 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+# Dependencies
+/vendor/
+node_modules/
+/node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Laravel / PHP artifacts (legacy, harmless)
+bootstrap/compiled.php
+app/storage/
+public/storage
+public/hot
+public_html/storage
+public_html/hot
+storage/*.key
+Homestead.yaml
+Homestead.json
+/.vagrant
+.phpunit.result.cache
+/public/build
+/storage/pail
+.env.backup
+.env.production
+.phpactor.json
+auth.json
+
 # Build outputs
 dist/
 dist-electron/
@@ -50,8 +77,10 @@ out/
 # Logs
 logs/
 *.log
+npm-debug.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
@@ -67,7 +96,6 @@ coverage/
 .nyc_output/
 
 # OS specific
-.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
@@ -78,13 +106,10 @@ $RECYCLE.BIN/
 
 # Electron
 electron-builder.js
-dist/
-out/
 
 # Temporary files
 *.tmp
 *.bak
-*.swp
 .temp/
 tmp/
 
@@ -93,5 +118,4 @@ tmp/
 # *.sqlite3
 
 # User data (Electron app data)
-# Uncomment if using Electron with user data directories
 # !app/userData/
