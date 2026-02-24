@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { initDatabase, getDatabase } from './database.js'
+import { initDatabase } from './database.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 

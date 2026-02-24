@@ -124,7 +124,7 @@ export const AppLayout = ({
             {/* Logo */}
             <div className="px-5 pt-5 pb-4">
                <div className="flex items-center gap-3">
-                  <img src="./favicon.jpg" alt="MEV Logo" className="w-9 h-9 rounded-lg shadow-lg" />
+                  <img src="./favicon.jpg" alt="MeV Logo" className="w-9 h-9 rounded-lg shadow-lg" />
                   <div>
                      <h1 className="font-bold text-base text-white tracking-tight leading-none">
                         <span style={{ fontFamily: 'ETML L, sans-serif' }}>ETML</span> / CFPV
@@ -149,7 +149,7 @@ export const AppLayout = ({
                            {parsedModule.identificationModule}
                         </span>
                         {parsedModule.groupeLabo && (
-                           <span className="text-[10px] font-medium text-slate-400 truncate max-w-[80px]" title={`Groupe: ${parsedModule.groupeLabo}`}>
+                           <span className="text-[10px] font-medium text-slate-400 truncate max-w-20" title={`Groupe: ${parsedModule.groupeLabo}`}>
                               {parsedModule.groupeLabo}
                            </span>
                         )}

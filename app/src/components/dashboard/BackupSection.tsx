@@ -3,7 +3,7 @@ import { exportDatabase, importDatabase, downloadBackup } from '../../lib/db'
 import { useConfirm } from '../../hooks/useConfirm'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 
-const api = (window as any).electronAPI
+const api = window.electronAPI
 
 export const BackupSection = () => {
    const [backupStatus, setBackupStatus] = useState<'idle' | 'exporting' | 'importing' | 'success' | 'error'>('idle')

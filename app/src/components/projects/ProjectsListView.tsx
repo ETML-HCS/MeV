@@ -371,7 +371,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               <button
                 onClick={handleExportAllProjects}
                 disabled={exportStatus !== 'idle' || projects.length === 0}
-                title="Exporte tous les MEV dans une archive ZIP"
+                title="Exporte tous les MeV dans une archive ZIP"
                 className="px-3 py-2 bg-white/10 border border-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -834,9 +834,9 @@ const StudentDocument: React.FC<StudentDocumentProps> = ({
   return (
     <Document
       title={`evaluation_${modulePrefix}_${testIdentifier}-${student.lastname}-${student.firstname}`}
-      author="MEV Evaluation Module"
+      author="MeV"
       subject={`Résultats pour ${student.firstname} ${student.lastname}`}
-      creator="MEV Evaluation Module"
+      creator="MeV"
       producer="React-PDF"
     >
       <Page size="A4" orientation="landscape" style={styles.page}>

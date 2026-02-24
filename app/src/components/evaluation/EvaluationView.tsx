@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { calculateFinalGrade, calculateGridTotals, calculateIndicatorPoints } from '../../lib/calculations'
 import type { Evaluation, Objective, Student, StudentGrid } from '../../types'
 
@@ -57,46 +57,37 @@ export const EvaluationView = ({
   onMarkAsIncomplete,
   onUpdateTestDateOverride,
 }: EvaluationViewProps) => {
-  const [evaluations, setEvaluations] = useState<Evaluation[]>(initialEvaluations)
-  const skipNextAutosaveRef = useRef(false)
-  const hydratedStudentIdRef = useRef<string | null>(null)
-  const lastSavedSignatureRef = useRef('')
-  const [showScrollButtons, setShowScrollButtons] = useState(false)
-  const [focusMode, setFocusMode] = useState(false)
-  const [showOnlyUngraded, setShowOnlyUngraded] = useState(false)
-  const [focusCursor, setFocusCursor] = useState(0)
-  const [collapsedObjectiveIds, setCollapsedObjectiveIds] = useState<string[]>([])
-  const [hasAlternateDate, setHasAlternateDate] = useState(false)
-  const [alternateDate, setAlternateDate] = useState('')
-  const [showDateInput, setShowDateInput] = useState(false)
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([])
 
-  useEffect(() => {
+  // Calculer les évaluations en fonction de l'étudiant sélectionné
+  const computedEvaluations = useMemo(() => {
     if (!selectedStudentId) {
-      hydratedStudentIdRef.current = null
-      lastSavedSignatureRef.current = ''
-      setEvaluations([])
-      return
+      return []
     }
+    return initialEvaluations
+  }, [selectedStudentId, initialEvaluations])
 
+  // Synchroniser l'état local avec les évaluations calculées
+  useEffect(() => {
     const studentChanged = hydratedStudentIdRef.current !== selectedStudentId
     
     // Ne réinitialiser que si l'étudiant a changé OU si c'est vraiment de nouvelles données
     // (pas juste un refetch de ce qu'on vient de sauvegarder)
-    const incomingSignature = JSON.stringify(initialEvaluations)
+    const incomingSignature = JSON.stringify(computedEvaluations)
     const isReallyNewData = incomingSignature !== lastSavedSignatureRef.current
     
     if (studentChanged) {
       hydratedStudentIdRef.current = selectedStudentId
       lastSavedSignatureRef.current = incomingSignature
       skipNextAutosaveRef.current = true
-      setEvaluations(initialEvaluations)
+      setEvaluations(computedEvaluations)
     } else if (isReallyNewData && evaluations.length === 0) {
       // Accepter les données tardives seulement si on a vraiment rien localement
       lastSavedSignatureRef.current = incomingSignature
       skipNextAutosaveRef.current = true
-      setEvaluations(initialEvaluations)
+      setEvaluations(computedEvaluations)
     }
-  }, [selectedStudentId, initialEvaluations, evaluations.length])
+  }, [selectedStudentId, computedEvaluations])
 
   // Synchroniser la date alternative avec la grille courante
   useEffect(() => {

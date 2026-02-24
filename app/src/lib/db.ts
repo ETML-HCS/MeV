@@ -5,13 +5,13 @@ import { parseModuleInfo } from '../utils/helpers'
 import { defaultModuleTemplates } from '../data/squelette_dep'
 
 // Vérifier que nous sommes dans Electron
-const isElectron = typeof window !== 'undefined' && (window as any).electronAPI
+const isElectron = typeof window !== 'undefined' && window.electronAPI
 
 if (!isElectron) {
   console.warn('⚠️ Running in browser mode - using Dexie IndexedDB for storage')
 }
 
-const api = (window as any).electronAPI
+const api = window.electronAPI
 
 // Fonction utilitaire pour vérifier l'API
 function ensureAPI() {
@@ -318,7 +318,7 @@ export const importDatabase = async (
 export const downloadBackup = async (jsonData: string, filename?: string): Promise<void> => {
   ensureAPI()
   const date = new Date().toISOString().split('T')[0]
-  const defaultFilename = `mev-backup-${date}.json`
+  const defaultFilename = `MeV-backup-${date}.json`
   
   await api.saveBackupToFile(jsonData, filename || defaultFilename)
 }
@@ -342,7 +342,7 @@ export const exportAllProjects = async (): Promise<Buffer> => {
 export const downloadProjectBackup = async (projectId: string, projectName?: string): Promise<void> => {
   ensureAPI()
   const date = new Date().toISOString().split('T')[0]
-  const defaultFilename = `MEV_${projectName || projectId}_${date}.json`
+  const defaultFilename = `MeV_${projectName || projectId}_${date}.json`
   
   const jsonData = await exportProject(projectId)
   await api.saveProjectBackupToFile(jsonData, defaultFilename)
@@ -351,7 +351,7 @@ export const downloadProjectBackup = async (projectId: string, projectName?: str
 export const downloadAllProjectsBackup = async (): Promise<void> => {
   ensureAPI()
   const date = new Date().toISOString().split('T')[0]
-  const filename = `MEV_BACKUP_ALL_${date}.zip`
+  const filename = `MeV_BACKUP_ALL_${date}.zip`
   
   const zipBuffer = await exportAllProjects()
   await api.saveZipBackupToFile(zipBuffer, filename)

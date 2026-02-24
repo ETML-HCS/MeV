@@ -10,7 +10,6 @@ import type {
   Student,
   StudentGrid,
   User,
-  UserEvaluation,
 } from '../src/types'
 import { DEFAULT_THRESHOLD, DEFAULT_CORRECTION_ERROR } from '../src/utils/constants.js'
 import { generateUserInitials } from '../src/utils/user-initials.js'
@@ -760,7 +759,13 @@ export async function exportAllProjectsAsZip(): Promise<Buffer> {
 // ============ USERS ============
 export function getCurrentUser(): User | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM users ORDER BY lastLogin DESC LIMIT 1').get() as any
+  const row = db.prepare('SELECT * FROM users ORDER BY lastLogin DESC LIMIT 1').get() as {
+    id: string
+    name: string
+    initials: string
+    color: string
+    lastLogin: string
+  } | undefined
   
   if (!row) return null
   
@@ -776,7 +781,14 @@ export function getCurrentUser(): User | null {
 
 export function getUser(userId: string): User | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any
+  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as {
+    id: string
+    name: string
+    initials: string
+    color: string
+    createdAt: string
+    lastLogin: string
+  } | undefined
   
   if (!row) return null
   
@@ -792,7 +804,14 @@ export function getUser(userId: string): User | null {
 
 export function getAllUsers(): User[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM users ORDER BY lastLogin DESC').all() as any[]
+  const rows = db.prepare('SELECT * FROM users ORDER BY lastLogin DESC').all() as Array<{
+    id: string
+    name: string
+    initials: string
+    color: string
+    createdAt: string
+    lastLogin: string
+  }>
   
   return rows.map(row => ({
     id: row.id,
@@ -906,7 +925,14 @@ export function getUserRecentProjects(userId: string, limit = 5): Array<{ projec
       ORDER BY ue.lastOpenedAt DESC
       LIMIT ?
     `)
-    .all(userId, limit) as any[]
+    .all(userId, limit) as Array<{
+      id: string
+      name: string
+      description: string
+      createdAt: string
+      updatedAt: string
+      lastOpenedAt: string
+    }>
   
   return rows.map(row => ({
     project: {
@@ -937,9 +963,21 @@ export function getUserProjectsByModule(userId: string): Array<{ module: string;
       WHERE ue.userId = ?
       ORDER BY p.moduleNumber DESC, ue.lastOpenedAt DESC
     `)
-    .all(userId) as any[]
+    .all(userId) as Array<{
+      id: string
+      name: string
+      description: string
+      moduleNumber: string
+      modulePrefix: string
+      weightPercentage: number
+      settings: string
+      students: string
+      objectives: string
+      grids: string
+      lastOpenedAt: string
+    }>
   
-  const grouped: Record<string, any[]> = {}
+  const grouped: Record<string, EvaluationProject[]> = {}
   
   rows.forEach(row => {
     const module = row.moduleNumber || 'Autres'

@@ -1,6 +1,7 @@
 {
-  "name": "mev-evaluation",
-  "productName": "MEV",
+  "name": "mev",
+  "productName": "MeV",
+  "description": "Application de gestion et d'évaluation des modules pour l'ETML",
   "private": true,
   "version": "3.5.2",
   "type": "module",
@@ -75,8 +76,8 @@
     "wait-on": "^9.0.4"
   },
   "build": {
-    "appId": "ch.etml.mev-evaluation",
-    "productName": "MEV",
+    "appId": "ch.etml.mev",
+    "productName": "MeV",
     "directories": {
       "output": "dist/release",
       "buildResources": "build"
