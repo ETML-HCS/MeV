@@ -15,6 +15,8 @@ interface EvaluationViewProps {
   maxQuestionsToAnswer: number | null // null = toutes les questions
   currentGrid: StudentGrid | null | undefined
   grids: StudentGrid[]
+  viewMode: 'objectives' | 'questions'
+  onChangeViewMode: (mode: 'objectives' | 'questions') => void
   onSave: (evaluations: Evaluation[]) => void
   onMarkAsCompleted: () => void
   onMarkAsIncomplete: () => void
@@ -48,6 +50,8 @@ export const EvaluationView = ({
   maxQuestionsToAnswer,
   currentGrid,
   grids,
+  viewMode,
+  onChangeViewMode,
   onSave,
   onMarkAsCompleted,
   onMarkAsIncomplete,
@@ -65,11 +69,6 @@ export const EvaluationView = ({
   const [hasAlternateDate, setHasAlternateDate] = useState(false)
   const [alternateDate, setAlternateDate] = useState('')
   const [showDateInput, setShowDateInput] = useState(false)
-  const [viewMode, setViewMode] = useState<'objectives' | 'questions'>(() => {
-    if (typeof window === 'undefined') return 'objectives'
-    const stored = window.localStorage.getItem('mev-evaluation-view-mode')
-    return stored === 'questions' || stored === 'objectives' ? stored : 'objectives'
-  })
 
   useEffect(() => {
     if (!selectedStudentId) {
@@ -276,31 +275,6 @@ export const EvaluationView = ({
     })
   }, [focusMode, totalVisibleQuestions])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem('mev-evaluation-view-mode', viewMode)
-  }, [viewMode])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const readStoredMode = () => {
-      const stored = window.localStorage.getItem('mev-evaluation-view-mode')
-      return stored === 'questions' || stored === 'objectives' ? stored : 'objectives'
-    }
-
-    const handleStorage = () => {
-      setViewMode(readStoredMode())
-    }
-
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('mev-evaluation-view-mode-change', handleStorage as EventListener)
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('mev-evaluation-view-mode-change', handleStorage as EventListener)
-    }
-  }, [])
-
   const upsertEvaluation = (next: Evaluation) => {
     setEvaluations((prev) => {
       const index = prev.findIndex(
@@ -409,12 +383,35 @@ export const EvaluationView = ({
   }
 
   useEffect(() => {
-    if (!focusMode || readOnly) return
+    if (readOnly) return
 
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
-      if (!focusedKey) return
+
+      // Global shortcuts
+      if (event.key === 'ArrowRight' && event.ctrlKey) {
+        event.preventDefault()
+        handleNextStudent()
+        return
+      }
+      if (event.key === 'ArrowLeft' && event.ctrlKey) {
+        event.preventDefault()
+        handlePrevStudent()
+        return
+      }
+      if (event.key.toLowerCase() === 'o' && event.ctrlKey) {
+        event.preventDefault()
+        onChangeViewMode('objectives')
+        return
+      }
+      if (event.key.toLowerCase() === 'q' && event.ctrlKey) {
+        event.preventDefault()
+        onChangeViewMode('questions')
+        return
+      }
+
+      if (!focusMode || !focusedKey) return
 
       const [objectiveId, indicatorId] = focusedKey.split('__')
       if (!objectiveId || !indicatorId) return
@@ -437,7 +434,7 @@ export const EvaluationView = ({
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [focusMode, focusedKey, evaluations, readOnly, objectives, totalVisibleQuestions])
+  }, [focusMode, focusedKey, evaluations, readOnly, objectives, totalVisibleQuestions, canNext, canPrev, currentIndex, students])
 
   return (
     <section className="space-y-5">
@@ -450,7 +447,7 @@ export const EvaluationView = ({
               onClick={handlePrevStudent}
               disabled={!canPrev}
               className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              title="Élève précédent"
+              title="Élève précédent (Ctrl+←)"
             >
               ‹
             </button>
@@ -458,7 +455,7 @@ export const EvaluationView = ({
               onClick={() => canNext && onSelectStudent(students[currentIndex + 1].id)}
               disabled={!canNext}
               className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              title="Élève suivant"
+              title="Élève suivant (Ctrl+→)"
             >
               ›
             </button>
@@ -642,25 +639,24 @@ export const EvaluationView = ({
 
         {selectedStudentId && showObjectives && (
           <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+            {/* Toggle Q/O */}
             <button
-              onClick={() => setViewMode('objectives')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition-all ${
-                viewMode === 'objectives'
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
+              onClick={() => {
+                const next = viewMode === 'objectives' ? 'questions' : 'objectives'
+                onChangeViewMode(next)
+              }}
+              className="relative flex items-center w-18 h-7 rounded-md border border-slate-300 bg-white shadow-sm overflow-hidden transition-all hover:border-blue-400 group"
+              title={viewMode === 'objectives' ? 'Passer en vue Questions (Ctrl+Q)' : 'Passer en vue Objectifs (Ctrl+O)'}
             >
-              Vue objectifs
-            </button>
-            <button
-              onClick={() => setViewMode('questions')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition-all ${
-                viewMode === 'questions'
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Vue questions
+              <span className={`absolute inset-y-0 w-1/2 rounded m-0.5 transition-all duration-200 ${
+                viewMode === 'objectives' ? 'left-0 bg-slate-900' : 'left-1/2 bg-slate-900'
+              }`} />
+              <span className={`relative z-10 flex-1 text-center text-[10px] font-bold transition-colors ${
+                viewMode === 'objectives' ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
+              }`}>O</span>
+              <span className={`relative z-10 flex-1 text-center text-[10px] font-bold transition-colors ${
+                viewMode === 'questions' ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
+              }`}>Q</span>
             </button>
             <button
               onClick={() => setFocusMode((prev) => !prev)}
@@ -711,6 +707,7 @@ export const EvaluationView = ({
                 <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-md text-[10px] text-blue-600 font-medium">
                   <kbd className="px-1 py-0.5 bg-white border border-blue-200 rounded text-[10px] font-mono">0-3</kbd> noter
                   <kbd className="px-1 py-0.5 bg-white border border-blue-200 rounded text-[10px] font-mono ml-1">↵</kbd> suivant
+                  <kbd className="px-1 py-0.5 bg-white border border-blue-200 rounded text-[10px] font-mono ml-1">Ctrl+→</kbd> élève suiv.
                 </span>
                 <button
                   onClick={goToPreviousFocus}
@@ -1138,7 +1135,7 @@ export const EvaluationView = ({
             <button
               onClick={handleNextStudent}
               className="relative w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center group"
-              title={`Élève suivant : ${students[currentIndex + 1].lastname} ${students[currentIndex + 1].firstname}`}
+              title={`Élève suivant : ${students[currentIndex + 1].lastname} ${students[currentIndex + 1].firstname} (Ctrl+→)`}
               aria-label="Passer à l'élève suivant et remonter en haut"
             >
               <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

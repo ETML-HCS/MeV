@@ -1,12 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { exportDatabase, importDatabase, downloadBackup } from '../../lib/db'
 import { useConfirm } from '../../hooks/useConfirm'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
+
+const api = (window as any).electronAPI
 
 export const BackupSection = () => {
    const [backupStatus, setBackupStatus] = useState<'idle' | 'exporting' | 'importing' | 'success' | 'error'>('idle')
    const [backupMessage, setBackupMessage] = useState('')
    const [confirm, confirmDialogProps] = useConfirm()
+   const [dbPath, setDbPath] = useState<string | null>(null)
+
+   useEffect(() => {
+      if (api?.getDatabasePath) {
+         api.getDatabasePath().then((p: string) => setDbPath(p)).catch(() => {})
+      }
+   }, [])
 
    const handleExportBackup = async () => {
       try {
@@ -162,6 +171,13 @@ export const BackupSection = () => {
                   </div>
                </div>
             </div>
+            {dbPath && (
+               <div className="px-6 pb-4 pt-0">
+                  <p className="text-[10px] text-slate-400 font-mono truncate" title={dbPath}>
+                     📁 Base de données : {dbPath}
+                  </p>
+               </div>
+            )}
          </div>
          <ConfirmDialog {...confirmDialogProps} />
       </>

@@ -68,6 +68,8 @@ export const defaultSettings: AppSettings = {
   maxQuestionsToAnswer: null,
   testDate: new Date().toISOString().split('T')[0],
   schoolName: '',
+  evaluationViewMode: 'objectives',
+  objectivesViewMode: 'objectives',
 }
 
 export const getSettings = async (): Promise<AppSettings> => {
@@ -881,11 +883,17 @@ export const db = {
 
 export const initDb = async () => {
   try {
-    // Inject default module templates if they don't exist
+    // Inject or update default module templates (sys-* are always synced from code)
     for (const template of defaultModuleTemplates) {
       const existing = await db.moduleTemplates.get(template.id)
       if (!existing) {
         await db.moduleTemplates.add(template)
+      } else if (template.id.startsWith('sys-')) {
+        // Always update system templates to reflect code changes
+        await db.moduleTemplates.put({
+          ...template,
+          updatedAt: new Date(),
+        })
       }
     }
   } catch (error) {

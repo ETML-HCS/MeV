@@ -14,6 +14,7 @@ interface SynthesisViewProps {
   testIdentifier?: string
   moduleName?: string
   correctedBy?: string
+  schoolName?: string
 }
 
 const colorForScore = (score: number | null | undefined) => {
@@ -34,7 +35,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url)
 }
 
-export const SynthesisView = ({ objectives, students, grids, testDate, testIdentifier = 'C216', moduleName = 'Module', correctedBy = '' }: SynthesisViewProps) => {
+export const SynthesisView = ({ objectives, students, grids, testDate, testIdentifier = 'C216', moduleName = 'Module', correctedBy = '', schoolName }: SynthesisViewProps) => {
   const [isExporting, setIsExporting] = useState(false)
   const [sortBy, setSortBy] = useState<'name' | 'grade'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
@@ -46,11 +47,13 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
   )
 
   // Calculer le total par élève
-  const studentTotals = useMemo(() => {
+  const { studentTotals, scoredStudentIds } = useMemo(() => {
     const totals = new Map<string, number>()
+    const scored = new Set<string>()
     for (const student of evaluatedStudents) {
       const grid = grids.find(g => g.studentId === student.id)
       let total = 0
+      let hasScore = false
       for (const objective of objectives) {
         for (const indicator of objective.indicators) {
           const evaluation = grid?.evaluations.find(
@@ -58,12 +61,14 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
           )
           if (evaluation?.score !== null && evaluation?.score !== undefined) {
             total += calculateIndicatorPoints(indicator.weight * objective.weight, evaluation.score)
+            hasScore = true
           }
         }
       }
       totals.set(student.id, total)
+      if (hasScore) scored.add(student.id)
     }
-    return totals
+    return { studentTotals: totals, scoredStudentIds: scored }
   }, [evaluatedStudents, grids, objectives])
 
   // Trier les élèves
@@ -82,9 +87,24 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     return sorted
   }, [evaluatedStudents, sortBy, sortDir, studentTotals])
 
-  // Statistiques de classe
+  // Max points théorique (toutes questions score 3)
+  const maxPoints = useMemo(() => {
+    let mp = 0
+    for (const objective of objectives) {
+      for (const indicator of objective.indicators) {
+        mp += calculateIndicatorPoints(indicator.weight * objective.weight, 3)
+      }
+    }
+    return mp
+  }, [objectives])
+
+  const toSix = (pts: number) => maxPoints > 0 ? (pts / maxPoints * 6) : 0
+
+  // Statistiques de classe (exclut les élèves sans aucune note saisie)
   const classStats = useMemo(() => {
-    const totals = Array.from(studentTotals.values())
+    const totals = Array.from(studentTotals.entries())
+      .filter(([id]) => scoredStudentIds.has(id))
+      .map(([, v]) => v)
     if (totals.length === 0) return null
     const sorted = [...totals].sort((a, b) => a - b)
     const sum = sorted.reduce((acc, v) => acc + v, 0)
@@ -94,7 +114,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     const mid = Math.floor(sorted.length / 2)
     const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
     return { mean, median, min, max, count: sorted.length }
-  }, [studentTotals])
+  }, [studentTotals, scoredStudentIds])
 
   const toggleSort = (col: 'name' | 'grade') => {
     if (sortBy === col) {
@@ -119,7 +139,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     setIsExporting(true)
     try {
       // HAUTE FIX #20: Use only evaluated students to match table display
-      const result = await generateBatchZip(evaluatedStudents, grids, objectives, testIdentifier, moduleName, correctedBy, testDate)
+      const result = await generateBatchZip(evaluatedStudents, grids, objectives, testIdentifier, moduleName, correctedBy, testDate, schoolName)
       downloadBlob(result.blob, result.fileName)
     } finally {
       setIsExporting(false)
@@ -131,7 +151,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     if (!grid) return
 
     try {
-      const blob = await generateStudentPdfBlob(student, grid, objectives, testIdentifier, moduleName, correctedBy, testDate)
+      const blob = await generateStudentPdfBlob(student, grid, objectives, testIdentifier, moduleName, correctedBy, testDate, schoolName)
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
       // L'URL sera révoquée quand l'onglet sera fermé
@@ -215,20 +235,24 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
           <h3 className="text-sm font-bold text-slate-700 mb-3">Statistiques de classe</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
-              <div className="text-lg font-bold text-blue-700">{classStats.mean.toFixed(1)}</div>
-              <div className="text-[11px] text-blue-500 font-medium">Moyenne</div>
+              <div className="text-lg font-bold text-blue-700">{classStats.mean.toFixed(1)} <span className="text-sm font-semibold text-blue-400">({toSix(classStats.mean).toFixed(1)}/6)</span></div>
+              <div className="text-[11px] text-blue-600 font-semibold">Moyenne</div>
+              <div className="text-[10px] text-blue-400 mt-0.5">Score moyen de la classe</div>
             </div>
             <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-center">
-              <div className="text-lg font-bold text-purple-700">{classStats.median.toFixed(1)}</div>
-              <div className="text-[11px] text-purple-500 font-medium">Médiane</div>
+              <div className="text-lg font-bold text-purple-700">{classStats.median.toFixed(1)} <span className="text-sm font-semibold text-purple-400">({toSix(classStats.median).toFixed(1)}/6)</span></div>
+              <div className="text-[11px] text-purple-600 font-semibold">Médiane</div>
+              <div className="text-[10px] text-purple-400 mt-0.5">50% des élèves au-dessus</div>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-center">
-              <div className="text-lg font-bold text-red-700">{classStats.min.toFixed(1)}</div>
-              <div className="text-[11px] text-red-500 font-medium">Min</div>
+              <div className="text-lg font-bold text-red-700">{classStats.min.toFixed(1)} <span className="text-sm font-semibold text-red-400">({toSix(classStats.min).toFixed(1)}/6)</span></div>
+              <div className="text-[11px] text-red-600 font-semibold">Note la plus basse</div>
+              <div className="text-[10px] text-red-400 mt-0.5">Score le plus faible obtenu</div>
             </div>
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-center">
-              <div className="text-lg font-bold text-emerald-700">{classStats.max.toFixed(1)}</div>
-              <div className="text-[11px] text-emerald-500 font-medium">Max</div>
+              <div className="text-lg font-bold text-emerald-700">{classStats.max.toFixed(1)} <span className="text-sm font-semibold text-emerald-400">({toSix(classStats.max).toFixed(1)}/6)</span></div>
+              <div className="text-[11px] text-emerald-600 font-semibold">Note la plus haute</div>
+              <div className="text-[10px] text-emerald-400 mt-0.5">Meilleur score obtenu</div>
             </div>
           </div>
         </div>
@@ -357,22 +381,6 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* LEGEND */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <span className="font-semibold text-slate-700">Légende :</span>
-        {[
-          { color: 'bg-red-100 border-red-200', label: '0 (Insuffisant)' },
-          { color: 'bg-orange-100 border-orange-200', label: '1 (Partiel)' },
-          { color: 'bg-amber-100 border-amber-200', label: '2 (Satisfaisant)' },
-          { color: 'bg-emerald-100 border-emerald-200', label: '3 (Excellent)' },
-        ].map(item => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            <span className={`w-4 h-4 ${item.color} border rounded`} />
-            <span>{item.label}</span>
-          </div>
-        ))}
       </div>
 
       <ConfirmDialog {...confirmDialogProps} />

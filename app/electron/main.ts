@@ -7,8 +7,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Garde une référence globale de la fenêtre pour éviter le garbage collection
 let mainWindow: BrowserWindow | null = null
+const devServerPort = process.env.VITE_DEV_SERVER_PORT || '5273'
 
 function createWindow() {
+  // Résoudre le chemin de l'icône selon le contexte (dev vs production)
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'build', 'icon.ico')
+    : path.join(app.getAppPath(), 'build', 'icon.ico')
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -20,8 +26,8 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: false,
     },
-    title: 'MEV - Module Évaluation',
-    icon: path.join(__dirname, '../build/icon.ico'),
+    title: 'MEV',
+    icon: iconPath,
     backgroundColor: '#f8fafc',
     show: false, // Ne pas afficher avant que tout soit prêt
   })
@@ -33,7 +39,7 @@ function createWindow() {
 
   // Charger l'app
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.loadURL(`http://localhost:${devServerPort}`)
     mainWindow.webContents.openDevTools()
   } else {
     // En production, utiliser app.getAppPath() pour obtenir le chemin correct

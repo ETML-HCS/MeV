@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { db } from '../lib/db'
+import { useAppStore } from '../stores/useAppStore'
 import type { Objective } from '../types'
-
-const QUERY_KEY = ['objectives']
 
 export const useObjectives = () => {
   const queryClient = useQueryClient()
+  const activeProjectId = useAppStore((state) => state.activeProjectId)
+
+  const QUERY_KEY = ['objectives', activeProjectId]
 
   const normalizeObjective = (objective: Objective): Objective => ({
     ...objective,
@@ -31,6 +33,7 @@ export const useObjectives = () => {
       const items = await db.objectives.orderBy('number').toArray()
       return items.map((item) => normalizeObjective(item))
     },
+    enabled: !!activeProjectId,
   })
 
   const upsert = useMutation({

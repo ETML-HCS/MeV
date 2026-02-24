@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createProject, deleteProject, duplicateProject, getProjects, updateProject, createEvaluation, downloadProjectBackup, downloadAllProjectsBackup, importDatabase, db } from '../../lib/db'
 import { parseProjectName, getModuleCardColors } from '../../utils/helpers'
@@ -9,9 +9,11 @@ interface ProjectsListViewProps {
   onSelectProject: (projectId: string) => void
   onOpenTemplates: () => void
   onOpenEvaluationTemplates: () => void
+  onOpenGroupGrades: () => void
+  onOpenModuleSummary: (moduleName: string) => void
 }
 
-export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvaluationTemplates }: ProjectsListViewProps) => {
+export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvaluationTemplates, onOpenGroupGrades, onOpenModuleSummary }: ProjectsListViewProps) => {
   const queryClient = useQueryClient()
   const [newProjectName, setNewProjectName] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -22,6 +24,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [confirm, confirmDialogProps] = useConfirm()
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   const projectsQuery = useQuery({
     queryKey: ['projects'],
@@ -122,6 +125,24 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   const handleCreate = async () => {
     await createMutation.mutateAsync()
   }
+
+  useEffect(() => {
+    if (showCreateForm) {
+      nameInputRef.current?.focus()
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        setShowCreateForm(true)
+        setTimeout(() => nameInputRef.current?.focus(), 0)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showCreateForm])
 
   const handleDelete = async (id: string) => {
     const ok = await confirm({
@@ -310,6 +331,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
+                  data-shortcut-search="true"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filtrer..."
@@ -335,6 +357,16 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
                 Templates
+              </button>
+              <button
+                onClick={onOpenGroupGrades}
+                title="Notes par groupes labo"
+                className="px-3 py-2 bg-white/10 border border-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/20 transition-all flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V9H2v11h5m10 0a3 3 0 01-3 3H10a3 3 0 01-3-3m10 0V6a2 2 0 00-2-2H9a2 2 0 00-2 2v14" />
+                </svg>
+                Notes
               </button>
               <button
                 onClick={handleExportAllProjects}
@@ -382,9 +414,16 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                 Nom de l'évaluation
               </label>
               <input
+                ref={nameInputRef}
                 type="text"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newProjectName.trim() && !createMutation.isPending) {
+                    e.preventDefault()
+                    handleCreate()
+                  }
+                }}
                 placeholder="ex: Module 164 - Hiver 2026"
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
               />
@@ -502,8 +541,13 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-1.5">
-                      <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5 relative">
+                      {module.evaluations[0]?.createdAt && (
+                        <div className="absolute -top-1 -right-1 text-[10px] font-medium text-slate-500 bg-white/60 px-1.5 py-0.5 rounded shadow-sm border border-slate-100">
+                          {new Date(module.evaluations[0].createdAt).toLocaleDateString('fr-CH', { year: 'numeric', month: 'short' })}
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between gap-2 pr-16">
                         <h3
                           onClick={() => handleStartEdit(module.name)}
                           className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 cursor-pointer transition-colors flex-1 group/edit flex items-center gap-1.5"
@@ -618,6 +662,19 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                   </svg>
                   Nouvelle évaluation (EP)
                 </button>
+
+                {/* Synthèse EP button - shown when multiple EPs */}
+                {module.evaluations.length > 1 && (
+                  <button
+                    onClick={() => onOpenModuleSummary(module.name)}
+                    className="w-full mt-1 py-1.5 border border-dashed border-indigo-300 text-indigo-500 hover:text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50 rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center gap-1"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Synthèse EP
+                  </button>
+                )}
               </div>
             </div>
                 )})}

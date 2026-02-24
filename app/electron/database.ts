@@ -24,12 +24,96 @@ export function getDatabase(): Database.Database {
   return db
 }
 
+// Noms d'application précédents connus (pour migration automatique de la base)
+const KNOWN_PREVIOUS_APP_NAMES = [
+  'MEV',
+  'mev-evaluation',
+  'MEV-Evaluation',
+  'MEV Evaluation',
+  'MEV - Module Évaluation',
+  'Module Evaluation',
+  'mev_evaluation',
+]
+
+export function getDatabasePath(): string {
+  const userDataPath = app.getPath('userData')
+  return path.join(userDataPath, 'mev-evaluation.sqlite')
+}
+
+export function getUserDataPath(): string {
+  return app.getPath('userData')
+}
+
+/**
+ * Recherche une ancienne base de données dans les dossiers userData précédents.
+ * Utile quand le nom de l'application a changé (productName dans package.json),
+ * car Electron change le chemin userData en conséquence.
+ */
+function findOldDatabase(): string | null {
+  const userDataPath = app.getPath('userData')
+  const appDataRoot = path.dirname(userDataPath)
+  const currentFolderName = path.basename(userDataPath)
+
+  for (const appName of KNOWN_PREVIOUS_APP_NAMES) {
+    if (appName === currentFolderName) continue // Skip le nom actuel
+    const oldDbPath = path.join(appDataRoot, appName, 'mev-evaluation.sqlite')
+    if (fs.existsSync(oldDbPath)) {
+      console.log(`📦 Ancienne base de données trouvée : ${oldDbPath}`)
+      return oldDbPath
+    }
+  }
+
+  // Aussi chercher avec des variantes de noms dans le dossier AppData\Roaming
+  try {
+    const entries = fs.readdirSync(appDataRoot, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      if (entry.name === currentFolderName) continue
+      // Chercher les dossiers qui contiennent "mev" ou "evaluation" (insensible à la casse)
+      const lowerName = entry.name.toLowerCase()
+      if (lowerName.includes('mev') || lowerName.includes('evaluation')) {
+        const oldDbPath = path.join(appDataRoot, entry.name, 'mev-evaluation.sqlite')
+        if (fs.existsSync(oldDbPath)) {
+          console.log(`📦 Ancienne base de données trouvée (scan) : ${oldDbPath}`)
+          return oldDbPath
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Erreur lors du scan des anciens dossiers :', e)
+  }
+
+  return null
+}
+
 export async function initDatabase(): Promise<void> {
   const userDataPath = app.getPath('userData')
   const dbPath = path.join(userDataPath, 'mev-evaluation.sqlite')
 
   // S'assurer que le dossier existe
   fs.mkdirSync(userDataPath, { recursive: true })
+
+  // Si la base n'existe pas, chercher une ancienne base à migrer
+  if (!fs.existsSync(dbPath)) {
+    const oldDbPath = findOldDatabase()
+    if (oldDbPath) {
+      console.log(`🔄 Migration de l'ancienne base de données...`)
+      console.log(`   Source : ${oldDbPath}`)
+      console.log(`   Destination : ${dbPath}`)
+      try {
+        // Copier l'ancienne base (on ne supprime pas l'originale par sécurité)
+        fs.copyFileSync(oldDbPath, dbPath)
+        // Copier aussi le WAL et SHM si présents
+        const walPath = oldDbPath + '-wal'
+        const shmPath = oldDbPath + '-shm'
+        if (fs.existsSync(walPath)) fs.copyFileSync(walPath, dbPath + '-wal')
+        if (fs.existsSync(shmPath)) fs.copyFileSync(shmPath, dbPath + '-shm')
+        console.log(`✅ Ancienne base de données migrée avec succès !`)
+      } catch (e) {
+        console.error(`❌ Erreur lors de la migration de la base :`, e)
+      }
+    }
+  }
 
   db = new Database(dbPath)
   db.pragma('journal_mode = WAL') // Write-Ahead Logging pour meilleures perfs
@@ -137,6 +221,8 @@ function initDefaultSettings(): void {
       maxQuestionsToAnswer: null,
       testDate: new Date().toISOString().split('T')[0],
       schoolName: '',
+      evaluationViewMode: 'objectives',
+      objectivesViewMode: 'objectives',
     }
 
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
@@ -173,6 +259,8 @@ export function getSettings(): AppSettings {
     maxQuestionsToAnswer: null,
     testDate: new Date().toISOString().split('T')[0],
     schoolName: '',
+    evaluationViewMode: 'objectives',
+    objectivesViewMode: 'objectives',
   }
 
   return { ...defaultSettings, ...JSON.parse(row.value) }
@@ -322,6 +410,8 @@ export function createProject(name: string, description: string = ''): Evaluatio
     maxQuestionsToAnswer: null,
     testDate: new Date().toISOString().split('T')[0],
     schoolName: '',
+    evaluationViewMode: 'objectives',
+    objectivesViewMode: 'objectives',
   }
 
   const project: EvaluationProject = {
@@ -497,10 +587,55 @@ export function createEvaluation(baseProjectId: string): EvaluationProject {
   return newEvaluation
 }
 
+/**
+ * Synchronise les données en mémoire vers le projet courant dans la base.
+ * DOIT être appelé avant tout export pour garantir que les données sont à jour.
+ */
+export function flushMemoryToDatabase(
+  projectId: string | null,
+  students: Student[],
+  objectives: Objective[],
+  grids: StudentGrid[],
+): void {
+  if (!projectId) {
+    console.warn('⚠️ flushMemoryToDatabase: pas de projectId, rien à synchroniser')
+    return
+  }
+
+  const database = getDatabase()
+  const project = getProject(projectId)
+  if (!project) {
+    console.warn(`⚠️ flushMemoryToDatabase: projet ${projectId} non trouvé`)
+    return
+  }
+
+  try {
+    database.prepare(
+      `UPDATE projects SET
+        students = ?, objectives = ?, grids = ?, updatedAt = ?
+      WHERE id = ?`,
+    ).run(
+      JSON.stringify(students),
+      JSON.stringify(objectives),
+      JSON.stringify(grids),
+      new Date().toISOString(),
+      projectId,
+    )
+    console.log(`✅ Projet ${projectId} synchronisé en base (${students.length} élèves, ${objectives.length} objectifs, ${grids.length} grilles)`)
+  } catch (error) {
+    console.error('❌ Erreur lors de la synchronisation mémoire→DB :', error)
+  }
+}
+
 // Export/Import
 export function exportDatabase(): string {
   const projects = getProjects()
   const settings = getSettings()
+
+  // Log pour diagnostiquer les problèmes de backup
+  for (const p of projects) {
+    console.log(`📋 Export projet "${p.name}" [${p.id.substring(0, 8)}...]: ${p.students.length} élèves, ${p.objectives.length} objectifs, ${p.grids.length} grilles`)
+  }
 
   return JSON.stringify(
     {

@@ -102,6 +102,8 @@ export interface AppSettings {
   maxQuestionsToAnswer: number | null // null = toutes les questions, sinon nombre spécifique (ex: 13/16)
   testDate: string // Date du test (format ISO YYYY-MM-DD)
   schoolName: string // Nom de l'école pour le PDF (ex: "ETML / CFPV") - peut contenir du HTML simple
+  evaluationViewMode: 'objectives' | 'questions' // Vue préférée pour l'onglet évaluation
+  objectivesViewMode: 'objectives' | 'questions' // Vue préférée pour l'onglet objectifs
 }
 
 export interface AppState {
@@ -122,6 +124,8 @@ export type AppTab =
   | 'projects'
   | 'templates'
   | 'evaluationTemplates'
+  | 'groupGrades'
+  | 'moduleSummary'
 
 export interface EvaluationProject {
   id: string

@@ -1,4 +1,3 @@
-import { BackupSection } from './BackupSection'
 import { TestConfigSection } from './TestConfigSection'
 import { StudentInputSection } from './StudentInputSection'
 import type { AppSettings, Objective, Student, StudentGrid } from '../../types'
@@ -26,7 +25,6 @@ export const DashboardView = ({
 }: DashboardViewProps) => {
    return (
       <section className="space-y-6">
-         <BackupSection />
          <TestConfigSection
             settings={settings}
             objectives={objectives}

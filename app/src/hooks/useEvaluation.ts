@@ -52,7 +52,7 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
     onSuccess: () => {
       setSaveStatus('saved')
       queryClient.invalidateQueries({ queryKey: ['grid', studentId] })
-      queryClient.invalidateQueries({ queryKey: ['grids'] })
+      queryClient.invalidateQueries({ queryKey: ['grids', activeProjectId] })
       // Réinitialiser le statut après 2 secondes
       setTimeout(() => setSaveStatus('idle'), 2000)
     },
@@ -76,7 +76,7 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grid', studentId] })
-      queryClient.invalidateQueries({ queryKey: ['grids'] })
+      queryClient.invalidateQueries({ queryKey: ['grids', activeProjectId] })
     },
   })
 
@@ -94,7 +94,7 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grid', studentId] })
-      queryClient.invalidateQueries({ queryKey: ['grids'] })
+      queryClient.invalidateQueries({ queryKey: ['grids', activeProjectId] })
     },
   })
 
@@ -137,7 +137,7 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grid', studentId] })
-      queryClient.invalidateQueries({ queryKey: ['grids'] })
+      queryClient.invalidateQueries({ queryKey: ['grids', activeProjectId] })
     },
   })
 

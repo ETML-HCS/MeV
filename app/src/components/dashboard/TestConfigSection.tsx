@@ -108,24 +108,36 @@ export const TestConfigSection = ({
    return (
       <>
          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-linear-to-r from-slate-900 to-slate-800 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="px-5 py-3 bg-linear-to-r from-slate-900 to-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                <h3 className="text-xs font-semibold tracking-wider text-white uppercase">Configuration du test</h3>
-               <div className="inline-flex w-fit items-center gap-2 rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] text-slate-200">
-                  <span>Pts 4.0 :</span>
-                  <span className="text-sm font-bold text-white">
-                     {isMaxPointsVariable ? 'Variable' : minPointsFor4.toFixed(0)}
-                  </span>
-                  <span>
-                     / {isMaxPointsVariable ? 'Variable' : effectiveMaxPoints.toFixed(0)}
-                     {settings.maxQuestionsToAnswer !== null && effectiveMaxPoints !== gridMaxPoints && !isMaxPointsVariable && (
-                        <span className="ml-1 opacity-60">({gridMaxPoints.toFixed(0)})</span>
-                     )}
-                  </span>
+               <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                     <span className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold" title="Peut contenir du HTML simple">Logo PDF :</span>
+                     <input
+                        className="w-36 sm:w-48 border border-white/20 rounded-md px-2 py-1 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all bg-white hover:bg-slate-50"
+                        value={settings.schoolName}
+                        onChange={(e) => onUpdateSettings({ ...settings, schoolName: e.target.value })}
+                        placeholder="ex: ETML / CFPV"
+                        title="Peut contenir du HTML simple (ex: <strong>ETML</strong> / CFPV)"
+                     />
+                  </div>
+                  <div className="inline-flex w-fit items-center gap-2 rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] text-slate-200">
+                     <span>Pts 4.0 :</span>
+                     <span className="text-sm font-bold text-white">
+                        {isMaxPointsVariable ? 'Variable' : minPointsFor4.toFixed(0)}
+                     </span>
+                     <span>
+                        / {isMaxPointsVariable ? 'Variable' : effectiveMaxPoints.toFixed(0)}
+                        {settings.maxQuestionsToAnswer !== null && effectiveMaxPoints !== gridMaxPoints && !isMaxPointsVariable && (
+                           <span className="ml-1 opacity-60">({gridMaxPoints.toFixed(0)})</span>
+                        )}
+                     </span>
+                  </div>
                </div>
             </div>
             <div className="px-5 py-4">
                {/* Ligne 1 — Champs principaux */}
-               <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-2 xl:grid-cols-[1fr_0.7fr_auto_0.7fr_auto]">
+               <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-2 xl:grid-cols-[1fr_0.7fr_auto_0.7fr_auto_auto_auto_auto]">
                   <div>
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Module</label>
                      <input
@@ -181,15 +193,50 @@ export const TestConfigSection = ({
                      />
                   </div>
                   <div>
-                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">École (PDF)</label>
+                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Questions
+                     </label>
                      <input
-                        className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
-                        value={settings.schoolName}
-                        onChange={(e) => onUpdateSettings({ ...settings, schoolName: e.target.value })}
-                        placeholder="ex: ETML / CFPV"
-                        title="Peut contenir du HTML simple (ex: <strong>ETML</strong> / CFPV)"
+                        type="number"
+                        min={1}
+                        placeholder="Toutes"
+                        className="w-16 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
+                        value={settings.maxQuestionsToAnswer ?? ''}
+                        onChange={(e) => {
+                           const val = e.target.value.trim()
+                           onUpdateSettings({ ...settings, maxQuestionsToAnswer: val === '' ? null : Math.max(1, Number(val)) })
+                        }}
                      />
-                     <p className="text-[8px] text-slate-400 mt-1">Peut contenir du HTML simple (&lt;strong&gt;, &lt;em&gt;, &lt;sub&gt;, &lt;sup&gt;)</p>
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1" title="Facteur erreur (bonus/malus note)">
+                        Facteur err.
+                     </label>
+                     <div className="flex items-center gap-1">
+                        <input
+                           type="number"
+                           step="0.1"
+                           min={-1}
+                           max={1}
+                           className="w-16 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
+                           value={settings.correctionError}
+                           onChange={(e) => onUpdateSettings({ ...settings, correctionError: Math.max(-1, Math.min(1, Number(e.target.value))) })}
+                        />
+                     </div>
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Seuil 4.0</label>
+                     <div className="flex items-center gap-1">
+                        <input
+                           type="number"
+                           min={0}
+                           max={100}
+                           className="w-14 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
+                           value={Math.round(settings.threshold * 100)}
+                           onChange={(e) => onUpdateSettings({ ...settings, threshold: Number(e.target.value) / 100 })}
+                        />
+                        <span className="text-xs text-slate-400 font-medium">%</span>
+                     </div>
                   </div>
                </div>
 
@@ -217,65 +264,15 @@ export const TestConfigSection = ({
                   </div>
                )}
 
-               {/* Ligne 2 — Description + Paramètres numériques */}
-               <div className="grid grid-cols-1 gap-3 items-end mt-3 md:grid-cols-[1fr_auto_auto_auto]">
-                  <div>
-                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
-                     <textarea
-                        className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300 min-h-24 max-h-40 overflow-y-auto resize-none"
-                        value={settings.moduleDescription}
-                        onChange={(e) => onUpdateSettings({ ...settings, moduleDescription: e.target.value })}
-                        placeholder="Description du test..."
-                     />
-                  </div>
-                  <div>
-                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                        Questions
-                     </label>
-                     <input
-                        type="number"
-                        min={1}
-                        placeholder="Toutes"
-                        className="w-20 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
-                        value={settings.maxQuestionsToAnswer ?? ''}
-                        onChange={(e) => {
-                           const val = e.target.value.trim()
-                           onUpdateSettings({ ...settings, maxQuestionsToAnswer: val === '' ? null : Math.max(1, Number(val)) })
-                        }}
-                     />
-                  </div>
-                  <div>
-                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                        Facteur erreur
-                     </label>
-                     <p className="text-[9px] text-slate-400 mb-1.5">(bonus/malus note)</p>
-                     <div className="flex items-center gap-1">
-                        <input
-                           type="number"
-                           step="0.1"
-                           min={-1}
-                           max={1}
-                           className="w-20 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
-                           value={settings.correctionError}
-                           onChange={(e) => onUpdateSettings({ ...settings, correctionError: Math.max(-1, Math.min(1, Number(e.target.value))) })}
-                        />
-                        <span className="text-xs text-slate-400 font-medium">pts</span>
-                     </div>
-                  </div>
-                  <div>
-                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Seuil 4.0</label>
-                     <div className="flex items-center gap-1">
-                        <input
-                           type="number"
-                           min={0}
-                           max={100}
-                           className="w-16 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
-                           value={Math.round(settings.threshold * 100)}
-                           onChange={(e) => onUpdateSettings({ ...settings, threshold: Number(e.target.value) / 100 })}
-                        />
-                        <span className="text-xs text-slate-400 font-medium">%</span>
-                     </div>
-                  </div>
+               {/* Ligne 2 — Description */}
+               <div className="mt-3">
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
+                  <textarea
+                     className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300 min-h-24 max-h-40 overflow-y-auto resize-none"
+                     value={settings.moduleDescription}
+                     onChange={(e) => onUpdateSettings({ ...settings, moduleDescription: e.target.value })}
+                     placeholder="Description du test..."
+                  />
                </div>
             </div>
          </div>

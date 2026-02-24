@@ -1,3 +1,4 @@
+import React from 'react'
 import { Document, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer'
 import JSZip from 'jszip'
 import type { Objective, Student, StudentGrid } from '../types'
@@ -56,129 +57,147 @@ const styles = StyleSheet.create({
   // Header Section
   header: {
     position: 'relative',
-    marginBottom: 15,
-    padding: 15,
-    paddingBottom: 10,
+    marginBottom: 20,
+    padding: 20,
     backgroundColor: '#ffffff',
-    borderRadius: 6,
-    borderBottomWidth: 3,
-    borderBottomColor: COLORS.slate[800],
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
+    borderTopWidth: 4,
+    borderTopColor: COLORS.slate[800],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   schoolLogo: {
     position: 'absolute',
-    top: 15,
-    right: 15,
+    top: 20,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   schoolLogoEtml: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.slate[700],
+    color: COLORS.slate[800],
     letterSpacing: 1,
   },
   schoolLogoDivider: {
-    fontSize: 14,
-    color: COLORS.slate[400],
+    fontSize: 16,
+    color: COLORS.slate[300],
   },
   schoolLogoCfpv: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: COLORS.slate[700],
-  },
-  studentName: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.slate[800],
-    marginBottom: 4,
+  },
+  studentName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.slate[900],
+    marginBottom: 6,
   },
   headerInfo: {
-    fontSize: 10,
-    color: COLORS.slate[500],
-    marginBottom: 2,
+    fontSize: 11,
+    color: COLORS.slate[600],
+    marginBottom: 4,
   },
   descriptionLabel: {
-    fontSize: 10,
-    color: COLORS.slate[500],
+    fontSize: 11,
+    color: COLORS.slate[700],
     fontWeight: 'bold',
-    marginBottom: 4,
-    marginTop: 4,
+    marginBottom: 6,
+    marginTop: 8,
   },
   descriptionItem: {
-    fontSize: 9,
+    fontSize: 10,
     color: COLORS.slate[600],
-    marginBottom: 3,
-    paddingLeft: 8,
-    lineHeight: 1.4,
+    marginBottom: 4,
+    paddingLeft: 10,
+    lineHeight: 1.5,
   },
 
   // Summary Box
   summaryBox: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-    padding: 10,
-    backgroundColor: COLORS.slate[100],
-    borderRadius: 4,
+    gap: 16,
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: COLORS.slate[50],
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
   },
   summaryItem: {
     flexDirection: 'column',
     flex: 1,
     minWidth: 0,
+    alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 7,
+    fontSize: 8,
     color: COLORS.slate[500],
     textTransform: 'uppercase',
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
   summaryValue: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.slate[800],
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: COLORS.slate[300],
+    backgroundColor: COLORS.slate[200],
+    marginVertical: 4,
   },
 
   // Objective Blocks
   objectiveBlock: {
-    marginBottom: 10,
+    marginBottom: 8,
     backgroundColor: '#ffffff',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.slate[200],
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   objectiveHeader: {
     backgroundColor: COLORS.slate[800],
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   objectiveTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#ffffff',
     flex: 1,
   },
   objectiveTotal: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
-    color: COLORS.slate[300],
-    marginLeft: 10,
+    color: COLORS.slate[200],
+    marginLeft: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
 
   // Indicator Rows
   indicatorRow: {
     flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.slate[100],
     alignItems: 'center',
@@ -191,47 +210,55 @@ const styles = StyleSheet.create({
   // Badges
   badgeContainer: {
     flexDirection: 'row',
-    gap: 4,
-    width: '12%',
+    gap: 6,
+    width: '6%',
   },
   badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 3,
-    fontSize: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    fontSize: 9,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   badgeObjective: {
-    backgroundColor: COLORS.slate[200],
-    color: COLORS.slate[600],
+    backgroundColor: COLORS.slate[100],
+    color: COLORS.slate[700],
+    borderWidth: 1,
+    borderColor: COLORS.slate[200],
   },
   badgeQuestion: {
     backgroundColor: COLORS.emerald[100],
     color: COLORS.emerald[800],
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
   },
 
   // Content Columns
   behavior: {
-    width: '34%',
-    fontSize: 9,
-    color: COLORS.slate[700],
-    paddingRight: 8,
-    lineHeight: 1.3,
+    width: '40%',
+    fontSize: 10,
+    color: COLORS.slate[800],
+    paddingRight: 12,
+    lineHeight: 1.4,
   },
   points: {
     width: '13%',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 'bold',
-    color: '#1e40af',
+    color: COLORS.slate[700],
     textAlign: 'center',
+    backgroundColor: COLORS.slate[50],
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   remark: {
     width: '31%',
-    fontSize: 8,
-    color: COLORS.slate[500],
+    fontSize: 9,
+    color: COLORS.slate[600],
     fontStyle: 'italic',
-    lineHeight: 1.3,
+    lineHeight: 1.4,
+    paddingLeft: 8,
   },
 
   // Score Display
@@ -242,14 +269,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scoreBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
   scoreText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#ffffff',
   },
@@ -426,11 +457,9 @@ const ScoreDisplay: React.FC<{ score: number | null | undefined }> = ({ score })
  * Composant pour les badges Objectif/Question
  */
 const IndicatorBadges: React.FC<{
-  objectiveNumber: number
   questionNumber?: number
-}> = ({ objectiveNumber, questionNumber }) => (
+}> = ({ questionNumber }) => (
   <View style={styles.badgeContainer}>
-    <Text style={[styles.badge, styles.badgeObjective]}>O{objectiveNumber}</Text>
     {questionNumber && (
       <Text style={[styles.badge, styles.badgeQuestion]}>Q{questionNumber}</Text>
     )}
@@ -438,12 +467,112 @@ const IndicatorBadges: React.FC<{
 )
 
 /**
+ * Parse une chaîne contenant du HTML simple (ex: <span style="...">Texte</span>)
+ * et la convertit en composants React-PDF (<Text>).
+ * Supporte <span>, <strong>, <b>, <em>, <i> avec attribut style optionnel.
+ */
+const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: object): React.ReactElement | null => {
+  if (!htmlString) return null
+
+  // Si pas de balises HTML, retourner le texte brut
+  if (!/<[a-z]/i.test(htmlString)) {
+    return <Text style={defaultStyle as any}>{htmlString}</Text>
+  }
+
+  // Tokeniser la chaîne en segments: texte brut + balises HTML
+  const tagRegex = /<(span|strong|b|em|i)(?:\s+style="([^"]*)")?>([^<]*)<\/\1>/gi
+  const elements: React.ReactElement[] = []
+  let lastIndex = 0
+  let key = 0
+  let match: RegExpExecArray | null
+
+  while ((match = tagRegex.exec(htmlString)) !== null) {
+    // Texte avant la balise
+    if (match.index > lastIndex) {
+      const textBefore = htmlString.substring(lastIndex, match.index)
+      if (textBefore.trim()) {
+        elements.push(<Text key={key++} style={defaultStyle as any}>{textBefore}</Text>)
+      }
+    }
+
+    const tagName = match[1].toLowerCase()
+    const inlineStyle = match[2] || ''
+    const textContent = match[3]
+
+    // Construire le style pour cette balise
+    const computedStyle: Record<string, any> = { ...(defaultStyle || {}) }
+
+    // Appliquer les styles par défaut selon la balise
+    if (tagName === 'strong' || tagName === 'b') {
+      computedStyle.fontWeight = 'bold'
+    } else if (tagName === 'em' || tagName === 'i') {
+      computedStyle.fontStyle = 'italic'
+    }
+
+    // Parser les styles inline CSS
+    if (inlineStyle) {
+      inlineStyle.split(';').forEach((declaration) => {
+        const colonIdx = declaration.indexOf(':')
+        if (colonIdx === -1) return
+        const prop = declaration.substring(0, colonIdx).trim()
+        const val = declaration.substring(colonIdx + 1).trim().replace(/['"]/g, '')
+        if (!prop || !val) return
+
+        // Convertir CSS kebab-case → camelCase
+        const camelProp = prop.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+
+        // Ignorer font-family (React-PDF crashe si la police n'est pas enregistrée)
+        // Mais simuler le rendu si on détecte ETML L
+        if (camelProp === 'fontFamily') {
+          if (val.includes('ETML L')) {
+            computedStyle.fontWeight = 'bold'
+            computedStyle.letterSpacing = 1
+          }
+          return
+        }
+
+        // Convertir les valeurs numériques
+        if (/^\d+(\.\d+)?(px|pt)?$/.test(val)) {
+          computedStyle[camelProp] = parseFloat(val)
+        } else {
+          computedStyle[camelProp] = val
+        }
+      })
+    }
+
+    elements.push(<Text key={key++} style={computedStyle}>{textContent}</Text>)
+    lastIndex = match.index + match[0].length
+  }
+
+  // Texte restant après la dernière balise
+  if (lastIndex < htmlString.length) {
+    const remaining = htmlString.substring(lastIndex).replace(/<[^>]+>/g, '')
+    if (remaining.trim()) {
+      elements.push(<Text key={key++} style={defaultStyle as any}>{remaining}</Text>)
+    }
+  }
+
+  // Si aucun élément trouvé (regex n'a rien matché), retourner le texte nettoyé
+  if (elements.length === 0) {
+    const cleaned = htmlString.replace(/<[^>]+>/g, '')
+    return <Text style={defaultStyle as any}>{cleaned}</Text>
+  }
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+      {elements}
+    </View>
+  )
+}
+
+/**
  * Composant Header avec résumé (première page seulement)
  */
 const DocumentHeaderFull: React.FC<{
   student: Student
   grid: StudentGrid
-}> = ({ student, grid }) => {
+  schoolName?: string
+}> = ({ student, grid, schoolName }) => {
   const gradeColor = grid.finalGrade >= 4 ? COLORS.semantic.success : COLORS.semantic.danger
   const percentageSuccess = grid.maxPoints > 0
     ? ((grid.totalPoints / grid.maxPoints) * 100).toFixed(1)
@@ -455,9 +584,15 @@ const DocumentHeaderFull: React.FC<{
     <View style={styles.header}>
       {/* Logo école en haut à droite */}
       <View style={styles.schoolLogo}>
-        <Text style={styles.schoolLogoEtml}>ETML</Text>
-        <Text style={styles.schoolLogoDivider}>/</Text>
-        <Text style={styles.schoolLogoCfpv}>CFPV</Text>
+        {schoolName ? (
+          parseHtmlToPdf(schoolName, { fontSize: 16, color: COLORS.slate[800] })
+        ) : (
+          <>
+            <Text style={styles.schoolLogoEtml}>ETML</Text>
+            <Text style={styles.schoolLogoDivider}>/</Text>
+            <Text style={styles.schoolLogoCfpv}>CFPV</Text>
+          </>
+        )}
       </View>
 
       <Text style={styles.studentName}>
@@ -569,7 +704,6 @@ const IndicatorRow: React.FC<{
   return (
     <View style={rowStyle}>
       <IndicatorBadges
-        objectiveNumber={objective.number}
         questionNumber={indicator.questionNumber}
       />
 
@@ -683,6 +817,7 @@ interface StudentDocumentProps {
   objectives: Objective[]
   testIdentifier?: string
   moduleName?: string
+  schoolName?: string
 }
 
 const StudentDocument: React.FC<StudentDocumentProps> = ({
@@ -691,6 +826,7 @@ const StudentDocument: React.FC<StudentDocumentProps> = ({
   objectives,
   testIdentifier = 'evaluation',
   moduleName = 'Module',
+  schoolName,
 }) => {
   const objectiveTotals = calculateObjectiveTotals(objectives, grid)
   const modulePrefix = moduleName.substring(0, 4).toUpperCase()
@@ -705,7 +841,7 @@ const StudentDocument: React.FC<StudentDocumentProps> = ({
     >
       <Page size="A4" orientation="landscape" style={styles.page}>
         {/* En-tête complet uniquement sur la première page */}
-        <DocumentHeaderFull student={student} grid={grid} />
+        <DocumentHeaderFull student={student} grid={grid} schoolName={schoolName} />
 
         <View style={styles.content}>
           {objectives.length === 0 ? (
@@ -734,12 +870,16 @@ const StudentDocument: React.FC<StudentDocumentProps> = ({
           )}
         </View>
 
-        {/* Footer fixe sur toutes les pages */}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>
-            {student.lastname} {student.firstname} • {grid.moduleName} • Note: {grid.finalGrade.toFixed(1)}/6 • Généré le {formatDate()}
-          </Text>
-        </View>
+        {/* Footer fixe sur toutes les pages sauf la première */}
+        <View fixed render={({ pageNumber }) => (
+          pageNumber > 1 ? (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                {student.lastname} {student.firstname} • {grid.moduleName} • Note: {grid.finalGrade.toFixed(1)}/6 • Généré le {formatDate()}
+              </Text>
+            </View>
+          ) : null
+        )} />
       </Page>
     </Document>
   )
@@ -759,7 +899,8 @@ export const generateStudentPdfBlob = async (
   testIdentifier?: string,
   moduleName?: string,
   correctedBy?: string,
-  fallbackTestDate?: string
+  fallbackTestDate?: string,
+  schoolName?: string
 ): Promise<Blob> => {
   // Utiliser testDateOverride si définie (pour élèves absents), sinon la date de la grille, ou la date de fallback
   const gridWithDate = {
@@ -767,7 +908,7 @@ export const generateStudentPdfBlob = async (
     testDate: grid.testDateOverride || grid.testDate || fallbackTestDate,
     correctedBy: grid.correctedBy || correctedBy,
   }
-  return pdf(<StudentDocument student={student} grid={gridWithDate} objectives={objectives} testIdentifier={testIdentifier} moduleName={moduleName} />).toBlob()
+  return pdf(<StudentDocument student={student} grid={gridWithDate} objectives={objectives} testIdentifier={testIdentifier} moduleName={moduleName} schoolName={schoolName} />).toBlob()
 }
 
 /**
@@ -780,7 +921,8 @@ export const generateBatchZip = async (
   testIdentifier: string,
   moduleName: string,
   correctedBy?: string,
-  fallbackTestDate?: string
+  fallbackTestDate?: string,
+  schoolName?: string
 ): Promise<PdfBatchZipResult> => {
   const zip = new JSZip()
   const errors: Array<{ student: string; error: string }> = []
@@ -811,6 +953,7 @@ export const generateBatchZip = async (
         moduleName,
         correctedBy,
         fallbackTestDate,
+        schoolName
       )
       const fileName = `evaluation_${modulePrefix}_${testIdentifier}-${student.lastname}-${student.firstname}.pdf`
       zip.file(fileName, blob)

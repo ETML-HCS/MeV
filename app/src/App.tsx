@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DashboardView } from './components/dashboard/DashboardView'
+import { BackupModal } from './components/dashboard/BackupModal'
 import { EvaluationView } from './components/evaluation/EvaluationView'
 import { AppLayout } from './components/layout/AppLayout'
 import { LoginModal } from './components/layout/LoginModal'
@@ -13,6 +14,8 @@ import { StudentsView } from './components/students/StudentsView'
 import { SynthesisView } from './components/synthesis/SynthesisView'
 import { TemplatesView } from './components/templates/TemplatesView'
 import { EvaluationTemplatesView } from './components/evaluation-templates/EvaluationTemplatesView'
+import { LabGroupGradesView } from './components/grades/LabGroupGradesView'
+import { ModuleSummaryView } from './components/grades/ModuleSummaryView'
 import { useEvaluation } from './hooks/useEvaluation'
 import { useObjectives } from './hooks/useObjectives'
 import { useStudents } from './hooks/useStudents'
@@ -21,12 +24,17 @@ import { db, getProject, getProjects, getSettings, setSettings, updateProject, r
 import { generateBatchZip } from './lib/pdf-generator'
 import { useAppStore } from './stores/useAppStore'
 import { useUserStore } from './stores/useUserStore'
-import type { Student, Objective } from './types'
+import type { Student, Objective, AppTab } from './types'
 
 function App() {
   const queryClient = useQueryClient()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showEditProfileModal, setShowEditProfileModal] = useState(false)
+  const [showBackupModal, setShowBackupModal] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [commandQuery, setCommandQuery] = useState('')
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
+  const [moduleSummaryName, setModuleSummaryName] = useState<string | null>(null)
   const hydratedProjectIdRef = useRef<string | null>(null)
   const lastSavedSnapshotRef = useRef<string>('')
   
@@ -40,8 +48,9 @@ function App() {
   const { grid, saveGrid, markAsCompleted, markAsIncomplete, updateTestDateOverride, saveStatus } = useEvaluation(selectedStudentId, objectives)
 
   const gridsQuery = useQuery({
-    queryKey: ['grids'],
+    queryKey: ['grids', activeProjectId],
     queryFn: () => db.grids.toArray(),
+    enabled: !!activeProjectId,
   })
 
   const settingsQuery = useQuery({
@@ -116,8 +125,21 @@ function App() {
         db.students.clear().then(() => db.students.bulkAdd(project.students)),
         db.objectives.clear().then(() => db.objectives.bulkAdd(project.objectives)),
         db.grids.clear().then(() => db.grids.bulkAdd(project.grids)),
-      ]).then(() => setSettings(project.settings)).then(() => {
-        setSettingsStore(project.settings)
+      ]).then(() => {
+        // Préserver les préférences de vue (elles sont globales, pas liées au projet)
+        const mergedSettings = {
+          ...project.settings,
+          evaluationViewMode: settings.evaluationViewMode || 'objectives',
+          objectivesViewMode: settings.objectivesViewMode || 'objectives',
+        }
+        return setSettings(mergedSettings)
+      }).then(() => {
+        const mergedSettings = {
+          ...projectQuery.data!.settings,
+          evaluationViewMode: settings.evaluationViewMode || 'objectives',
+          objectivesViewMode: settings.objectivesViewMode || 'objectives',
+        }
+        setSettingsStore(mergedSettings)
         
         // Mettre à jour la référence de snapshot AVANT de déclencher les requêtes
         // pour éviter que le useEffect de sauvegarde ne se déclenche avec des données obsolètes
@@ -130,9 +152,9 @@ function App() {
         
         // Invalider les requêtes pour forcer le rechargement depuis la DB locale
         return Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['students'] }),
-          queryClient.invalidateQueries({ queryKey: ['objectives'] }),
-          queryClient.invalidateQueries({ queryKey: ['grids'] }),
+          queryClient.invalidateQueries({ queryKey: ['students', activeProjectId] }),
+          queryClient.invalidateQueries({ queryKey: ['objectives', activeProjectId] }),
+          queryClient.invalidateQueries({ queryKey: ['grids', activeProjectId] }),
           queryClient.invalidateQueries({ queryKey: ['grid'] })
         ])
       }).then(() => {
@@ -185,14 +207,49 @@ function App() {
     }
   }, [students, objectives, settings, activeProjectId, gridsQuery.data])
 
+  // Sauvegarde forcée du projet courant (sans debounce)
+  const forceFlushProject = async (projectId: string) => {
+    if (!projectId) return
+    const project = projectQuery.data
+    if (!project || hydratedProjectIdRef.current !== projectId) return
+    try {
+      const currentGrids = await db.grids.toArray()
+      await saveProjectMutation.mutateAsync({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        createdAt: project.createdAt,
+        updatedAt: new Date(),
+        students,
+        objectives,
+        grids: currentGrids,
+        settings,
+        moduleNumber: project.moduleNumber,
+        modulePrefix: project.modulePrefix,
+        weightPercentage: project.weightPercentage,
+      })
+      console.log('✅ Projet sauvegardé avant changement de contexte')
+    } catch (e) {
+      console.error('❌ Erreur sauvegarde forcée :', e)
+    }
+  }
+
   const handleOpenProject = (projectId: string) => {
+    // Sauvegarder le projet courant avant d'en ouvrir un autre
+    if (activeProjectId && hydratedProjectIdRef.current === activeProjectId) {
+      forceFlushProject(activeProjectId)
+    }
     hydratedProjectIdRef.current = null
     lastSavedSnapshotRef.current = ''
     setActiveProjectId(projectId)
     setActiveTab('dashboard')
   }
 
-  const handleReturnToProjects = () => {
+  const handleReturnToProjects = async () => {
+    // Sauvegarder le projet courant avant de revenir à la liste
+    if (activeProjectId && hydratedProjectIdRef.current === activeProjectId) {
+      await forceFlushProject(activeProjectId)
+    }
     hydratedProjectIdRef.current = null
     lastSavedSnapshotRef.current = ''
     setActiveProjectId(null)
@@ -219,10 +276,20 @@ function App() {
       return filled >= requiredEvaluationsCount
     })
 
-  const completedEvaluationsCount = grids.filter((grid) => !!grid.completedAt).length
+  const completedEvaluationsCount = grids.filter((grid) => {
+    // Ignorer les grilles des élèves qui n'existent plus
+    if (!students.some(s => s.id === grid.studentId)) return false;
+
+    // Un élève est considéré comme évalué si sa grille a une date de complétion
+    // OU si toutes ses évaluations requises sont remplies
+    if (grid.completedAt) return true;
+    
+    const filled = grid.evaluations.filter((evaluation) => evaluation.score !== null && evaluation.score !== undefined).length;
+    return filled >= requiredEvaluationsCount && requiredEvaluationsCount > 0;
+  }).length
   const totalEvaluationsCount = students.length
 
-  const tabAccess = {
+  const tabAccess = useMemo(() => ({
     dashboard: true,
     students: hasTestInfo || hasStudents,
     objectives: hasStudents || hasObjectives,
@@ -231,7 +298,200 @@ function App() {
     synthesis: hasStudentSheets,
     projects: true,
     templates: true,
+    evaluationTemplates: true,
+    groupGrades: true,
+    moduleSummary: true,
+  }), [hasTestInfo, hasStudents, hasObjectives, hasStudentSheets])
+
+  type CommandItem = {
+    id: string
+    label: string
+    hint: string
+    action: () => void
   }
+
+  const commandItems = useMemo<CommandItem[]>(() => {
+    if (!activeProjectId) {
+      return [
+        { id: 'projects', label: 'Projets', hint: 'P', action: () => setActiveTab('projects') },
+        { id: 'templates', label: 'Squelettes modules', hint: 'T', action: () => setActiveTab('templates') },
+        { id: 'evaluationTemplates', label: 'Templates grilles', hint: 'G', action: () => setActiveTab('evaluationTemplates') },
+        { id: 'groupGrades', label: 'Notes groupes labo', hint: 'N', action: () => setActiveTab('groupGrades') },
+      ]
+    }
+
+    return [
+      { id: 'dashboard', label: 'Dashboard', hint: 'D', action: () => setActiveTab('dashboard') },
+      { id: 'students', label: 'Élèves', hint: 'S', action: () => setActiveTab('students') },
+      { id: 'objectives', label: 'Objectifs', hint: 'O', action: () => setActiveTab('objectives') },
+      { id: 'master-grid', label: 'Grille master', hint: 'M', action: () => setActiveTab('master-grid') },
+      { id: 'evaluation', label: 'Évaluation', hint: 'E', action: () => setActiveTab('evaluation') },
+      { id: 'synthesis', label: 'Synthèse', hint: 'Y', action: () => setActiveTab('synthesis') },
+      { id: 'return-projects', label: 'Retour aux projets', hint: 'P', action: () => { void handleReturnToProjects() } },
+    ].filter((item) => {
+      if (item.id === 'return-projects') return true
+      return tabAccess[item.id as keyof typeof tabAccess]
+    })
+  }, [activeProjectId, setActiveTab, tabAccess])
+
+  const filteredCommandItems = useMemo(() => {
+    const normalized = commandQuery.trim().toLowerCase()
+    if (!normalized) return commandItems
+    return commandItems.filter((item) => `${item.label} ${item.hint}`.toLowerCase().includes(normalized))
+  }, [commandItems, commandQuery])
+
+  const openCommandPalette = () => {
+    setCommandQuery('')
+    setSelectedCommandIndex(0)
+    setIsCommandPaletteOpen(true)
+  }
+
+  const closeCommandPalette = () => {
+    setIsCommandPaletteOpen(false)
+    setCommandQuery('')
+    setSelectedCommandIndex(0)
+  }
+
+  const runSelectedCommand = (command?: CommandItem) => {
+    const selected = command ?? filteredCommandItems[selectedCommandIndex] ?? filteredCommandItems[0]
+    if (!selected) return
+    selected.action()
+    closeCommandPalette()
+  }
+
+  useEffect(() => {
+    const isTextInput = (target: EventTarget | null) => {
+      const element = target as HTMLElement | null
+      if (!element) return false
+      return ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable
+    }
+
+    const handler = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+
+      if (isCommandPaletteOpen) {
+        if (key === 'escape') {
+          event.preventDefault()
+          closeCommandPalette()
+          return
+        }
+        if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          setSelectedCommandIndex((prev) => Math.min(prev + 1, Math.max(0, filteredCommandItems.length - 1)))
+          return
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault()
+          setSelectedCommandIndex((prev) => Math.max(prev - 1, 0))
+          return
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          runSelectedCommand()
+          return
+        }
+      }
+
+      if ((event.ctrlKey || event.metaKey) && key === 's') {
+        event.preventDefault()
+        if (activeProjectId) {
+          forceFlushProject(activeProjectId)
+        }
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && key === 'k') {
+        event.preventDefault()
+        openCommandPalette()
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && key === 'f') {
+        event.preventDefault()
+        const searchInput = document.querySelector<HTMLInputElement>('[data-shortcut-search="true"]')
+        if (searchInput) {
+          searchInput.focus()
+          searchInput.select()
+        }
+        return
+      }
+
+      if (isTextInput(event.target)) return
+
+      if (activeProjectId && event.altKey && !event.ctrlKey && !event.metaKey) {
+        const order: AppTab[] = ['dashboard', 'students', 'objectives', 'master-grid', 'evaluation', 'synthesis']
+        const currentIndex = order.indexOf(activeTab as AppTab)
+        if (currentIndex === -1) return
+
+        if (event.key === 'ArrowRight') {
+          event.preventDefault()
+          for (let i = currentIndex + 1; i < order.length; i++) {
+            const candidate = order[i]
+            if (tabAccess[candidate]) {
+              setActiveTab(candidate)
+              break
+            }
+          }
+          return
+        }
+
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault()
+          for (let i = currentIndex - 1; i >= 0; i--) {
+            const candidate = order[i]
+            if (tabAccess[candidate]) {
+              setActiveTab(candidate)
+              break
+            }
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [activeProjectId, activeTab, tabAccess, setActiveTab, isCommandPaletteOpen, filteredCommandItems, selectedCommandIndex])
+
+  useEffect(() => {
+    if (!isCommandPaletteOpen) return
+    setSelectedCommandIndex(0)
+  }, [commandQuery, isCommandPaletteOpen])
+
+  const commandPalette = isCommandPaletteOpen ? (
+    <div className="fixed inset-0 z-110 bg-black/40 flex items-start justify-center pt-[12vh] p-4" onClick={closeCommandPalette}>
+      <div className="w-full max-w-2xl bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <input
+            autoFocus
+            value={commandQuery}
+            onChange={(e) => setCommandQuery(e.target.value)}
+            placeholder="Aller à..."
+            className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+          />
+        </div>
+        <div className="max-h-80 overflow-y-auto p-2">
+          {filteredCommandItems.length === 0 ? (
+            <div className="px-3 py-8 text-sm text-slate-400 text-center">Aucun résultat</div>
+          ) : (
+            filteredCommandItems.map((item, index) => (
+              <button
+                key={item.id}
+                onClick={() => runSelectedCommand(item)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
+                  index === selectedCommandIndex
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-[11px] px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-500">{item.hint}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null
 
   const persistSettings = (next: typeof settings) => {
     setSettingsStore(next)
@@ -302,6 +562,7 @@ function App() {
       settings.moduleName,
       settings.correctedBy,
       settings.testDate,
+      settings.schoolName
     )
     downloadBlob(result.blob, result.fileName)
   }
@@ -330,6 +591,7 @@ function App() {
           </div>
           <TemplatesView onBack={() => setActiveTab('projects')} />
         </div>
+        {commandPalette}
       </div>
     )
   }
@@ -346,6 +608,41 @@ function App() {
           </div>
           <EvaluationTemplatesView onBack={() => setActiveTab('projects')} />
         </div>
+        {commandPalette}
+      </div>
+    )
+  }
+
+  // Mode groupGrades : afficher les notes par groupes labo
+  if (!activeProjectId && activeTab === 'groupGrades') {
+    return (
+      <div className="min-h-screen bg-slate-100">
+        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+        <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} />
+        <div className="max-w-7xl mx-auto p-6 lg:p-8">
+          <div className="flex justify-end mb-6">
+            <ProfileBadge onLoginClick={() => setShowLoginModal(true)} onEditClick={() => setShowEditProfileModal(true)} />
+          </div>
+          <LabGroupGradesView onBack={() => setActiveTab('projects')} />
+        </div>
+        {commandPalette}
+      </div>
+    )
+  }
+
+  // Mode moduleSummary : synthèse par module (EP)
+  if (!activeProjectId && activeTab === 'moduleSummary') {
+    return (
+      <div className="min-h-screen bg-slate-100">
+        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+        <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} />
+        <div className="max-w-7xl mx-auto p-6 lg:p-8">
+          <div className="flex justify-end mb-6">
+            <ProfileBadge onLoginClick={() => setShowLoginModal(true)} onEditClick={() => setShowEditProfileModal(true)} />
+          </div>
+          <ModuleSummaryView moduleName={moduleSummaryName ?? ''} onBack={() => setActiveTab('projects')} />
+        </div>
+        {commandPalette}
       </div>
     )
   }
@@ -353,7 +650,7 @@ function App() {
   // Mode projects : afficher la liste
   if (!activeProjectId) {
     return (
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-slate-100 relative">
         <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
         <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} />
         <div className="max-w-7xl mx-auto p-6 lg:p-8">
@@ -364,8 +661,14 @@ function App() {
             onSelectProject={handleOpenProject} 
             onOpenTemplates={() => setActiveTab('templates')}
             onOpenEvaluationTemplates={() => setActiveTab('evaluationTemplates')}
+            onOpenGroupGrades={() => setActiveTab('groupGrades')}
+            onOpenModuleSummary={(name) => { setModuleSummaryName(name); setActiveTab('moduleSummary') }}
           />
         </div>
+        <div className="fixed bottom-3 right-4 text-[10px] font-medium text-slate-400/60 pointer-events-none select-none">
+          v{__APP_VERSION__}
+        </div>
+        {commandPalette}
       </div>
     )
   }
@@ -385,6 +688,7 @@ function App() {
     <>
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} />
+      <BackupModal isOpen={showBackupModal} onClose={() => setShowBackupModal(false)} />
       <AppLayout
         activeTab={activeTab === 'projects' ? 'dashboard' : activeTab}
         testType={settings.testType}
@@ -407,6 +711,7 @@ function App() {
         }
         onOpenPseudo={() => setActiveTab('students')}
         onOpenMasterGrid={() => setActiveTab('master-grid')}
+        onOpenBackup={() => setShowBackupModal(true)}
         canOpenPseudo={tabAccess?.['students'] ?? true}
         canOpenMasterGrid={tabAccess?.['master-grid'] ?? true}
         moduleProjects={moduleProjects}
@@ -458,6 +763,8 @@ function App() {
           project={projectQuery.data}
           objectives={objectives}
           grids={grids}
+          viewMode={settings.objectivesViewMode || 'objectives'}
+          onChangeViewMode={(mode) => persistSettings({ ...settings, objectivesViewMode: mode })}
           onSave={async (objective) => {
             await upsert.mutateAsync({
               ...objective,
@@ -512,6 +819,8 @@ function App() {
           maxQuestionsToAnswer={settings.maxQuestionsToAnswer}
           currentGrid={grid}
           grids={grids}
+          viewMode={settings.evaluationViewMode || 'objectives'}
+          onChangeViewMode={(mode) => persistSettings({ ...settings, evaluationViewMode: mode })}
           onSave={(nextEvaluations) => {
             saveGrid.mutate(nextEvaluations)
           }}
@@ -530,6 +839,7 @@ function App() {
           testIdentifier={settings.testIdentifier}
           moduleName={settings.moduleName}
           correctedBy={settings.correctedBy}
+          schoolName={settings.schoolName}
         />
       )}
 
@@ -537,6 +847,7 @@ function App() {
         <TemplatesView />
       )}
     </AppLayout>
+    {commandPalette}
     </>
   )
 }

@@ -93,6 +93,30 @@ const electronAPI = {
     ipcRenderer.invoke('user:getRecentProjects', userId, limit),
   getUserProjectsByModule: (userId: string) =>
     ipcRenderer.invoke('user:getProjectsByModule', userId),
+
+  // Database info
+  getDatabasePath: () => ipcRenderer.invoke('db:getPath'),
+  getUserDataPath: () => ipcRenderer.invoke('db:getUserDataPath'),
+
+  // Microsoft Teams / Graph API
+  teamsAuthenticate: (clientId: string) => ipcRenderer.invoke('teams:authenticate', clientId),
+  teamsGetClasses: () => ipcRenderer.invoke('teams:getClasses'),
+  teamsGetClassMembers: (classId: string, isTeam: boolean) =>
+    ipcRenderer.invoke('teams:getClassMembers', classId, isTeam),
+  teamsIsAuthenticated: () => ipcRenderer.invoke('teams:isAuthenticated'),
+  teamsLogout: () => ipcRenderer.invoke('teams:logout'),
+  /**
+   * Écoute l'event 'teams:deviceCode' émis par le main process pendant l'auth.
+   * Retourne un cleanup function à appeler dans useEffect.
+   */
+  onTeamsDeviceCode: (
+    callback: (data: { verificationUri: string; userCode: string; expiresIn: number }) => void,
+  ) => {
+    const listener = (_event: unknown, data: { verificationUri: string; userCode: string; expiresIn: number }) =>
+      callback(data)
+    ipcRenderer.on('teams:deviceCode', listener as Parameters<typeof ipcRenderer.on>[1])
+    return (): void => { ipcRenderer.removeListener('teams:deviceCode', listener as Parameters<typeof ipcRenderer.on>[1]) }
+  },
 }
 
 // Exposer l'API au contexte du renderer

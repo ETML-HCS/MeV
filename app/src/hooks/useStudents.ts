@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { db } from '../lib/db'
+import { useAppStore } from '../stores/useAppStore'
 import type { Student } from '../types'
-
-const QUERY_KEY = ['students']
 
 export const useStudents = () => {
   const queryClient = useQueryClient()
+  const activeProjectId = useAppStore((state) => state.activeProjectId)
+
+  const QUERY_KEY = ['students', activeProjectId]
 
   const studentsQuery = useQuery({
     queryKey: QUERY_KEY,
     queryFn: () => db.students.orderBy('lastname').toArray(),
+    enabled: !!activeProjectId,
   })
 
   const replaceAll = useMutation({

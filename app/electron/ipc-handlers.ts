@@ -1,5 +1,6 @@
 import { ipcMain, dialog } from 'electron'
 import fs from 'node:fs/promises'
+import * as teamsService from './teams-service.js'
 import type {
   AppSettings,
   EvaluationProject,
@@ -249,6 +250,13 @@ ipcMain.handle('db:markGridAsIncomplete', (_event, studentId: string, projectId?
 
 // Backup & Restore
 ipcMain.handle('db:export', () => {
+  // CRITICAL: Synchroniser les données en mémoire vers le projet courant AVANT l'export
+  if (currentProjectId) {
+    const students = Array.from(memoryStore.students.values())
+    const objectives = Array.from(memoryStore.objectives.values())
+    const grids = Array.from(memoryStore.grids.values())
+    dbOperations.flushMemoryToDatabase(currentProjectId, students, objectives, grids)
+  }
   return dbOperations.exportDatabase()
 })
 
@@ -291,10 +299,24 @@ ipcMain.handle('file:loadBackup', async () => {
 
 // Project export
 ipcMain.handle('project:export', (_event, projectId: string) => {
+  // CRITICAL: Synchroniser les données en mémoire AVANT l'export si c'est le projet courant
+  if (currentProjectId === projectId) {
+    const students = Array.from(memoryStore.students.values())
+    const objectives = Array.from(memoryStore.objectives.values())
+    const grids = Array.from(memoryStore.grids.values())
+    dbOperations.flushMemoryToDatabase(projectId, students, objectives, grids)
+  }
   return dbOperations.exportProject(projectId)
 })
 
 ipcMain.handle('project:exportAll', async () => {
+  // CRITICAL: Synchroniser les données en mémoire AVANT l'export
+  if (currentProjectId) {
+    const students = Array.from(memoryStore.students.values())
+    const objectives = Array.from(memoryStore.objectives.values())
+    const grids = Array.from(memoryStore.grids.values())
+    dbOperations.flushMemoryToDatabase(currentProjectId, students, objectives, grids)
+  }
   return await dbOperations.exportAllProjectsAsZip()
 })
 
@@ -367,4 +389,61 @@ ipcMain.handle('user:getRecentProjects', (_event, userId: string, limit?: number
 
 ipcMain.handle('user:getProjectsByModule', (_event, userId: string) => {
   return dbOperations.getUserProjectsByModule(userId)
+})
+
+// Database info
+ipcMain.handle('db:getPath', () => {
+  return dbOperations.getDatabasePath()
+})
+
+ipcMain.handle('db:getUserDataPath', () => {
+  return dbOperations.getUserDataPath()
+})
+
+// ─── Microsoft Teams / Graph API ─────────────────────────────────────────────
+
+/**
+ * Lance le Device Code Flow MSAL.
+ * - Retourne immédiatement { verificationUri, userCode, expiresIn } via l'event 'teams:deviceCode'
+ * - Résout avec { success: true } quand l'utilisateur s'est authentifié
+ * - Résout avec { success: false, error } en cas d'échec
+ */
+ipcMain.handle('teams:authenticate', (event, clientId: string) => {
+  return new Promise<{ success: boolean; error?: string }>((resolve) => {
+    teamsService
+      .startDeviceCodeAuth(clientId, (verificationUri, userCode, expiresIn) => {
+        // Envoyer le code au renderer pendant que la fenêtre MSAL attend
+        event.sender.send('teams:deviceCode', { verificationUri, userCode, expiresIn })
+      })
+      .then(() => resolve({ success: true }))
+      .catch((err: unknown) =>
+        resolve({ success: false, error: err instanceof Error ? err.message : String(err) }),
+      )
+  })
+})
+
+ipcMain.handle('teams:getClasses', async () => {
+  try {
+    const classes = await teamsService.getClasses()
+    return { success: true, classes }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+})
+
+ipcMain.handle('teams:getClassMembers', async (_event, classId: string, isTeam: boolean) => {
+  try {
+    const members = await teamsService.getClassMembers(classId, isTeam)
+    return { success: true, members }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+})
+
+ipcMain.handle('teams:isAuthenticated', () => {
+  return teamsService.isAuthenticated()
+})
+
+ipcMain.handle('teams:logout', () => {
+  teamsService.logout()
 })

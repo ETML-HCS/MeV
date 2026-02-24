@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { parseLoginWorkbook } from '../../lib/excel-utils'
+import { getProjects } from '../../lib/db'
 import { useConfirm } from '../../hooks/useConfirm'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { Student } from '../../types'
@@ -13,7 +15,71 @@ interface StudentsViewProps {
 export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: StudentsViewProps) => {
   const [isImporting, setIsImporting] = useState(false)
   const [search, setSearch] = useState('')
+  const [loginDrafts, setLoginDrafts] = useState<Record<string, string>>({})
+  const [loginTouched, setLoginTouched] = useState<Record<string, boolean>>({})
   const [confirm, confirmDialogProps] = useConfirm()
+
+  const projectsQuery = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
+  })
+
+  useEffect(() => {
+    setLoginDrafts(
+      students.reduce<Record<string, string>>((acc, student) => {
+        acc[student.id] = student.login
+        return acc
+      }, {})
+    )
+    setLoginTouched({})
+  }, [students])
+
+  const normalizeLogin = (value: string) => value.trim().toLowerCase()
+  const normalizeName = (student: Student) => `${student.lastname} ${student.firstname}`.trim().toLowerCase()
+
+  const nameCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    students.forEach((student) => {
+      const key = normalizeName(student)
+      counts.set(key, (counts.get(key) || 0) + 1)
+    })
+    return counts
+  }, [students])
+
+  const existingLogins = useMemo(() => {
+    const set = new Set<string>()
+    const projects = projectsQuery.data ?? []
+    projects.forEach((project) => {
+      project.students.forEach((student) => {
+        const normalized = normalizeLogin(student.login || '')
+        if (normalized) set.add(normalized)
+      })
+    })
+    return set
+  }, [projectsQuery.data])
+
+  const getLoginError = (student: Student, value: string) => {
+    const normalized = normalizeLogin(value)
+    const isDuplicateName = (nameCounts.get(normalizeName(student)) || 0) > 1
+
+    if (isDuplicateName && !normalized) {
+      return 'Pseudo obligatoire pour distinguer les eleves avec le meme nom'
+    }
+
+    if (!normalized) return null
+
+    const hasConflict = (projectsQuery.data ?? []).some((project) =>
+      project.students.some((entry) =>
+        entry.id !== student.id && normalizeLogin(entry.login || '') === normalized
+      )
+    )
+
+    if (hasConflict) {
+      return 'Ce pseudo est deja utilise dans l\'application'
+    }
+
+    return null
+  }
 
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase()
@@ -29,6 +95,45 @@ export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: Studen
     setIsImporting(true)
     try {
       const parsed = await parseLoginWorkbook(file)
+      const parsedNameCounts = parsed.reduce<Map<string, number>>((acc, student) => {
+        const key = `${student.lastname} ${student.firstname}`.trim().toLowerCase()
+        acc.set(key, (acc.get(key) || 0) + 1)
+        return acc
+      }, new Map())
+
+      const loginSet = new Set(existingLogins)
+      const importIssues: string[] = []
+
+      parsed.forEach((student) => {
+        const key = `${student.lastname} ${student.firstname}`.trim().toLowerCase()
+        const requiresLogin = (parsedNameCounts.get(key) || 0) > 1
+        const normalizedLogin = normalizeLogin(student.login || '')
+
+        if (requiresLogin && !normalizedLogin) {
+          importIssues.push(`${student.lastname} ${student.firstname} : pseudo obligatoire (nom en double)`) 
+          return
+        }
+
+        if (normalizedLogin) {
+          if (loginSet.has(normalizedLogin)) {
+            importIssues.push(`${student.lastname} ${student.firstname} : pseudo deja utilise (${student.login})`)
+            return
+          }
+          loginSet.add(normalizedLogin)
+        }
+      })
+
+      if (importIssues.length > 0) {
+        await confirm({
+          title: 'Import bloque',
+          message: `Veuillez corriger ces points avant l'import :\n\n${importIssues.slice(0, 10).join('\n')}${importIssues.length > 10 ? '\n...' : ''}`,
+          confirmLabel: 'OK',
+          hideCancel: true,
+          variant: 'warning',
+        })
+        return
+      }
+
       if (students.length > 0) {
         const ok = await confirm({
           title: 'Remplacer la liste des élèves ?',
@@ -62,6 +167,7 @@ export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: Studen
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
             <input
+              data-shortcut-search="true"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher..."
@@ -132,12 +238,41 @@ export const StudentsView = ({ students, onReplaceAll, onUpdateStudent }: Studen
                       {student.firstname}
                     </td>
                     <td className="px-6 py-4">
-                      <input
-                        value={student.login}
-                        onChange={(e) => onUpdateStudent({ ...student, login: e.target.value })}
-                        className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        placeholder="login"
-                      />
+                      <div className="space-y-1">
+                        <input
+                          value={loginDrafts[student.id] ?? student.login}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setLoginDrafts((prev) => ({ ...prev, [student.id]: value }))
+                          }}
+                          onBlur={() => {
+                            const value = loginDrafts[student.id] ?? student.login
+                            const error = getLoginError(student, value)
+                            setLoginTouched((prev) => ({ ...prev, [student.id]: true }))
+                            if (!error && value !== student.login) {
+                              onUpdateStudent({ ...student, login: value.trim() })
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = loginDrafts[student.id] ?? student.login
+                              const error = getLoginError(student, value)
+                              setLoginTouched((prev) => ({ ...prev, [student.id]: true }))
+                              if (!error && value !== student.login) {
+                                onUpdateStudent({ ...student, login: value.trim() })
+                              }
+                            }
+                          }}
+                          className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                          placeholder="pseudo"
+                          aria-invalid={Boolean(loginTouched[student.id] && getLoginError(student, loginDrafts[student.id] ?? student.login))}
+                        />
+                        {loginTouched[student.id] && getLoginError(student, loginDrafts[student.id] ?? student.login) && (
+                          <div className="text-[11px] text-rose-600">
+                            {getLoginError(student, loginDrafts[student.id] ?? student.login)}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <input

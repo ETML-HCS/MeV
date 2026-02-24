@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useUserStore } from '../../stores/useUserStore'
+import { useAppStore } from '../../stores/useAppStore'
+import { setSettings as saveSettingsToDB } from '../../lib/db'
 import { useClickOutside } from '../../hooks/useClickOutside'
 
 interface ProfileBadgeProps {
@@ -10,19 +12,20 @@ interface ProfileBadgeProps {
 
 export const ProfileBadge = ({ onLoginClick, onEditClick, saveStatus }: ProfileBadgeProps) => {
   const { user, logout } = useUserStore()
+  const settings = useAppStore((s) => s.settings)
+  const setSettingsStore = useAppStore((s) => s.setSettings)
   const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   useClickOutside(menuRef, useCallback(() => setShowMenu(false), []), showMenu)
-  const [preferredView, setPreferredView] = useState<'objectives' | 'questions'>(() => {
-    if (typeof window === 'undefined') return 'objectives'
-    const stored = window.localStorage.getItem('mev-evaluation-view-mode')
-    return stored === 'questions' || stored === 'objectives' ? stored : 'objectives'
-  })
 
-  const viewLabel = useMemo(
-    () => (preferredView === 'questions' ? 'Questions (Q1→Qn)' : 'Objectifs'),
-    [preferredView],
-  )
+  const preferredEvalView = settings.evaluationViewMode || 'objectives'
+  const preferredObjView = settings.objectivesViewMode || 'objectives'
+
+  const updateViewMode = (key: 'evaluationViewMode' | 'objectivesViewMode', value: 'objectives' | 'questions') => {
+    const next = { ...settings, [key]: value }
+    setSettingsStore(next)
+    saveSettingsToDB(next)
+  }
 
   // Déterminer le style de saveStatus s'il est fourni
   const getSaveStatusDisplay = () => {
@@ -78,23 +81,16 @@ export const ProfileBadge = ({ onLoginClick, onEditClick, saveStatus }: ProfileB
     )
   }
 
-  // Si saveStatus est fourni, afficher seulement l'indicateur de sauvegarde
-  if (saveStatus) {
-    return (
-      <div className="flex items-center gap-2">
-        {getSaveStatusDisplay()}
-      </div>
-    )
-  }
-
-  // Sinon, afficher le menu utilisateur classique
+  // Sinon, afficher le menu utilisateur classique avec l'indicateur de sauvegarde si présent
   return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-all"
-        title={user.name}
-      >
+    <div className="flex items-center gap-4">
+      {saveStatus && getSaveStatusDisplay()}
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-all"
+          title={user.name}
+        >
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
           style={{ backgroundColor: user.color }}
@@ -128,46 +124,75 @@ export const ProfileBadge = ({ onLoginClick, onEditClick, saveStatus }: ProfileB
           </div>
 
           <div className="px-4 py-3 border-b border-slate-200">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Vue evaluation
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              Affichage par défaut
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-700">{viewLabel}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    setPreferredView('objectives')
-                    if (typeof window !== 'undefined') {
-                      window.localStorage.setItem('mev-evaluation-view-mode', 'objectives')
-                      window.dispatchEvent(new Event('mev-evaluation-view-mode-change'))
-                    }
-                    setShowMenu(false)
-                  }}
-                  className={`px-2 py-1 text-[11px] font-semibold rounded-md border transition-all ${
-                    preferredView === 'objectives'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  Obj
-                </button>
-                <button
-                  onClick={() => {
-                    setPreferredView('questions')
-                    if (typeof window !== 'undefined') {
-                      window.localStorage.setItem('mev-evaluation-view-mode', 'questions')
-                      window.dispatchEvent(new Event('mev-evaluation-view-mode-change'))
-                    }
-                    setShowMenu(false)
-                  }}
-                  className={`px-2 py-1 text-[11px] font-semibold rounded-md border transition-all ${
-                    preferredView === 'questions'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  Q
-                </button>
+            
+            <div className="space-y-3">
+              {/* Évaluation */}
+              <div>
+                <div className="text-[10px] font-medium text-slate-400 mb-1.5">ONGLET ÉVALUATION</div>
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => {
+                      updateViewMode('evaluationViewMode', 'objectives')
+                      setShowMenu(false)
+                    }}
+                    className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all ${
+                      preferredEvalView === 'objectives'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Objectifs
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateViewMode('evaluationViewMode', 'questions')
+                      setShowMenu(false)
+                    }}
+                    className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all ${
+                      preferredEvalView === 'questions'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Questions
+                  </button>
+                </div>
+              </div>
+
+              {/* Objectifs */}
+              <div>
+                <div className="text-[10px] font-medium text-slate-400 mb-1.5">ONGLET OBJECTIFS</div>
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => {
+                      updateViewMode('objectivesViewMode', 'objectives')
+                      setShowMenu(false)
+                    }}
+                    className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all ${
+                      preferredObjView === 'objectives'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Objectifs
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateViewMode('objectivesViewMode', 'questions')
+                      setShowMenu(false)
+                    }}
+                    className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all ${
+                      preferredObjView === 'questions'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Questions
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -199,6 +224,7 @@ export const ProfileBadge = ({ onLoginClick, onEditClick, saveStatus }: ProfileB
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }
