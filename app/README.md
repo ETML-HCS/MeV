@@ -3,7 +3,7 @@
 Application desktop de gestion et d'évaluation des modules pour l'ETML.  
 Solution moderne Electron, offline-first, conçue pour remplacer l'ancienne solution Excel VBA de grilles d'évaluation.
 
-## 🚀 Stack technique
+## Stack technique
 
 ### Frontend
 - **React 18** + **TypeScript** + **Vite**
@@ -25,7 +25,7 @@ Solution moderne Electron, offline-first, conçue pour remplacer l'ancienne solu
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install
@@ -33,25 +33,25 @@ npm install
 
 ---
 
-## 🛠️ Développement
+## Développement
 
 ### Mode web (Vite dev server)
 ```bash
 npm run dev
 ```
 Interface accessible sur `http://localhost:5273`  
-⚠️ Utilise IndexedDB (fallback) au lieu de SQLite
+Note: Utilise IndexedDB (fallback) au lieu de SQLite
 
 ### Mode Electron (application desktop)
 ```bash
 npm run dev:electron
 ```
 Lance Vite + Electron avec hot-reload complet  
-✅ Utilise SQLite pour la persistance
+Utilise SQLite pour la persistance
 
 ---
 
-## 📦 Build & Distribution
+## Build & Distribution
 
 ### Build web
 ```bash
@@ -74,7 +74,7 @@ npm run build:linux       # Linux
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ### Tests unitaires
 ```bash
@@ -91,7 +91,7 @@ Teste les flux critiques avec Playwright
 
 ---
 
-## 💾 Architecture de sauvegarde
+## Architecture de sauvegarde
 
 ### Système hybride
 
@@ -196,53 +196,53 @@ Dashboard → Sauvegarde → Importer
 
 ---
 
-## 🎯 Fonctionnalités
+## Fonctionnalités
 
 ### Gestion de projets
-- ✅ Création/édition/suppression de projets d'évaluation
-- ✅ Duplication de projets (templates)
-- ✅ Organisation par module (ex: I107, C216)
-- ✅ Pondération automatique (I = 80%, C = 20%)
+- Création/édition/suppression de projets d'évaluation
+- Duplication de projets (templates)
+- Organisation par module (ex: I107, C216)
+- Pondération automatique (I = 80%, C = 20%)
 
 ### Élèves
-- ✅ Import Excel (fichiers logins ETML)
-- ✅ Import Teams (SSO Microsoft + récupération groupes)
-- ✅ Édition manuelle (nom, prénom, login, groupe labo)
-- ✅ Tri et recherche
+- Import Excel (fichiers logins ETML)
+- Import Teams (SSO Microsoft + récupération groupes)
+- Édition manuelle (nom, prénom, login, groupe labo)
+- Tri et recherche
 
 ### Objectifs & Indicateurs
-- ✅ CRUD complet avec taxonomie Bloom
-- ✅ Jusqu'à 20 indicateurs par objectif
-- ✅ Duplication et réordonnancement (drag & drop)
-- ✅ Validation automatique somme des poids (= 100%)
-- ✅ Calcul automatique des points max
+- CRUD complet avec taxonomie Bloom
+- Jusqu'à 20 indicateurs par objectif
+- Duplication et réordonnancement (drag & drop)
+- Validation automatique somme des poids (= 100%)
+- Calcul automatique des points max
 
 ### Évaluation
-- ✅ Grille par élève avec scores 0-3
-- ✅ Calcul temps réel (points, note finale)
-- ✅ Mode focus (navigation clavier)
-- ✅ Remarques textuelles par indicateur
-- ✅ Statut complété/incomplet
-- ✅ **Autosave** : chaque modification sauvegardée instantanément
-- ✅ Date alternative par grille
+- Grille par élève avec scores 0-3
+- Calcul temps réel (points, note finale)
+- Mode focus (navigation clavier)
+- Remarques textuelles par indicateur
+- Statut complété/incomplet
+- **Autosave** : chaque modification sauvegardée instantanément
+- Date alternative par grille
 
 ### Synthèse & Exports
-- ✅ Tableau croisé élèves × objectifs
-- ✅ Heatmap visuelle des résultats
-- ✅ Statistiques classe (moyenne, médiane, min, max)
-- ✅ Export Excel global
-- ✅ PDF individuels avec en-tête personnalisé
-- ✅ ZIP batch (tous les PDF en un clic)
+- Tableau croisé élèves × objectifs
+- Heatmap visuelle des résultats
+- Statistiques classe (moyenne, médiane, min, max)
+- Export Excel global
+- PDF individuels avec en-tête personnalisé
+- ZIP batch (tous les PDF en un clic)
 
 ### Dashboard
-- ✅ Année académique auto-détectée (bascule en août)
-- ✅ Import rapide élèves/objectifs
-- ✅ Backup/Restore complet
-- ✅ Profil utilisateur multi-comptes
+- Année académique auto-détectée (bascule en août)
+- Import rapide élèves/objectifs
+- Backup/Restore complet
+- Profil utilisateur multi-comptes
 
 ---
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 app/
@@ -293,7 +293,7 @@ app/
 
 ---
 
-## 🔧 Migration Excel
+## Migration Excel
 
 Script de conversion des fichiers logins Excel vers JSON :
 
@@ -307,6 +307,5 @@ Le JSON généré contient :
 
 ---
 
-## 📄 Licence
-
-Application propriétaire ETML - Usage interne uniquement
+## Licence
+ - Application propriétaire ETML - Usage interne uniquement
