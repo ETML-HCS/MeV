@@ -36,6 +36,8 @@
     "clsx": "^2.1.1",
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3",
     "html-react-parser": "^5.2.17",
     "jszip": "^3.10.1",
     "lucide-react": "^0.570.0",
@@ -78,6 +80,11 @@
   "build": {
     "appId": "ch.etml.mev",
     "productName": "MeV",
+    "publish": {
+      "provider": "github",
+      "owner": "ETML-HCS",
+      "repo": "MeV"
+    },
     "directories": {
       "output": "dist/release",
       "buildResources": "build"

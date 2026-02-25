@@ -2,8 +2,39 @@ import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { initDatabase } from './database.js'
+import { autoUpdater } from 'electron-updater'
+import log from 'electron-log'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Configuration des logs pour l'auto-updater
+log.transports.file.level = 'info'
+autoUpdater.logger = log
+
+// Événements de mise à jour
+autoUpdater.on('checking-for-update', () => {
+  log.info('Vérification des mises à jour...')
+})
+autoUpdater.on('update-available', (info) => {
+  log.info('Mise à jour disponible.', info)
+  mainWindow?.webContents.send('update-available', info)
+})
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Aucune mise à jour disponible.', info)
+})
+autoUpdater.on('error', (err) => {
+  log.error('Erreur lors de la mise à jour : ' + err)
+})
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Vitesse de téléchargement: " + progressObj.bytesPerSecond
+  log_message = log_message + ' - Téléchargé ' + progressObj.percent + '%'
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')'
+  log.info(log_message)
+})
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Mise à jour téléchargée')
+  mainWindow?.webContents.send('update-downloaded', info)
+})
 
 // Garde une référence globale de la fenêtre pour éviter le garbage collection
 let mainWindow: BrowserWindow | null = null
@@ -69,6 +100,11 @@ app.whenReady().then(async () => {
       createWindow()
     }
   })
+
+  // Lancer la vérification des mises à jour (ne fonctionne qu'en production)
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify()
+  }
 })
 
 // Quitter quand toutes les fenêtres sont fermées (sauf sur macOS)

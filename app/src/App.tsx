@@ -35,6 +35,8 @@ function App() {
   const [commandQuery, setCommandQuery] = useState('')
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
   const [moduleSummaryName, setModuleSummaryName] = useState<string | null>(null)
+  const [updateAvailable, setUpdateAvailable] = useState<any>(null)
+  const [updateDownloaded, setUpdateDownloaded] = useState<any>(null)
   const hydratedProjectIdRef = useRef<string | null>(null)
   const lastSavedSnapshotRef = useRef<string>('')
   
@@ -101,6 +103,22 @@ function App() {
     }
     init()
   }, [initializeUser])
+
+  // Écouter les événements de mise à jour
+  useEffect(() => {
+    if (window.electronAPI?.onUpdateAvailable) {
+      const cleanupAvailable = window.electronAPI.onUpdateAvailable((info) => {
+        setUpdateAvailable(info)
+      })
+      const cleanupDownloaded = window.electronAPI.onUpdateDownloaded((info) => {
+        setUpdateDownloaded(info)
+      })
+      return () => {
+        cleanupAvailable()
+        cleanupDownloaded()
+      }
+    }
+  }, [])
 
   // Auto-remplir le correcteur avec le trigramme de l'utilisateur connecté si vide
   useEffect(() => {
@@ -855,6 +873,43 @@ function App() {
       )}
     </AppLayout>
     {commandPalette}
+    
+    {/* Notification de mise à jour */}
+    {(updateAvailable || updateDownloaded) && (
+      <div className="fixed bottom-4 right-4 bg-white border border-slate-200 shadow-lg rounded-lg p-4 z-50 max-w-sm animate-in slide-in-from-bottom-5">
+        <div className="flex items-start gap-3">
+          <div className="bg-blue-100 text-blue-600 p-2 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </div>
+          <div>
+            <h3 className="font-medium text-slate-900">
+              {updateDownloaded ? 'Mise à jour prête' : 'Mise à jour disponible'}
+            </h3>
+            <p className="text-sm text-slate-500 mt-1">
+              {updateDownloaded 
+                ? `La version ${updateDownloaded.version} a été téléchargée et est prête à être installée.` 
+                : `La version ${updateAvailable.version} est en cours de téléchargement...`}
+            </p>
+            {updateDownloaded && (
+              <div className="mt-3 flex gap-2">
+                <button 
+                  onClick={() => window.electronAPI?.installUpdate()}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Redémarrer et installer
+                </button>
+                <button 
+                  onClick={() => setUpdateDownloaded(null)}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-200 transition-colors"
+                >
+                  Plus tard
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     </>
   )
 }

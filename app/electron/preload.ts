@@ -120,6 +120,19 @@ const electronAPI = {
     ipcRenderer.on('teams:deviceCode', listener as Parameters<typeof ipcRenderer.on>[1])
     return (): void => { ipcRenderer.removeListener('teams:deviceCode', listener as Parameters<typeof ipcRenderer.on>[1]) }
   },
+
+  // Auto-updater
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    const listener = (_event: unknown, info: any) => callback(info)
+    ipcRenderer.on('update-available', listener as Parameters<typeof ipcRenderer.on>[1])
+    return (): void => { ipcRenderer.removeListener('update-available', listener as Parameters<typeof ipcRenderer.on>[1]) }
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    const listener = (_event: unknown, info: any) => callback(info)
+    ipcRenderer.on('update-downloaded', listener as Parameters<typeof ipcRenderer.on>[1])
+    return (): void => { ipcRenderer.removeListener('update-downloaded', listener as Parameters<typeof ipcRenderer.on>[1]) }
+  },
+  installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
 }
 
 // Exposer l'API au contexte du renderer

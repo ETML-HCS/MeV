@@ -456,3 +456,10 @@ ipcMain.handle('teams:isAuthenticated', () => {
 ipcMain.handle('teams:logout', () => {
   teamsService.logout()
 })
+
+// ─── Auto-updater ────────────────────────────────────────────────────────────
+import { autoUpdater } from 'electron-updater'
+
+ipcMain.handle('app:installUpdate', () => {
+  autoUpdater.quitAndInstall()
+})
