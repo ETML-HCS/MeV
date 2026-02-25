@@ -512,7 +512,7 @@ function App() {
       const updates = []
 
       for (const grid of grids) {
-        const totals = calculateGridTotals(objectives, grid.evaluations)
+        const totals = calculateGridTotals(objectives, grid.evaluations, settings.scoringMode)
         const nextFinalGrade = calculateFinalGrade(
           totals.totalPoints,
           totals.maxPoints,
@@ -546,7 +546,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [gridsQuery.data, objectives, settings.threshold, settings.correctionError, queryClient])
+  }, [gridsQuery.data, objectives, settings.threshold, settings.correctionError, settings.scoringMode, queryClient])
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob)
@@ -831,6 +831,7 @@ function App() {
           onMarkAsCompleted={() => markAsCompleted.mutate()}
           onMarkAsIncomplete={() => markAsIncomplete.mutate()}
           onUpdateTestDateOverride={(date) => updateTestDateOverride.mutate(date)}
+          scoringMode={settings.scoringMode}
         />
       )}
 
@@ -844,6 +845,7 @@ function App() {
           moduleName={settings.moduleName}
           correctedBy={settings.correctedBy}
           schoolName={settings.schoolName}
+          scoringMode={settings.scoringMode}
         />
       )}
 

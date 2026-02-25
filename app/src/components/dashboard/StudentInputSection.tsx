@@ -93,19 +93,17 @@ export const StudentInputSection = ({
    }, [students, grids])
 
    useEffect(() => {
-      // Initialiser depuis la DB seulement s'il n'y a pas déjà de saisie en cours
-      if (studentInputs.length === MIN_ROWS && studentInputs.every(s => !s.lastname && !s.firstname)) {
-         const dbStudents = students.map(s => ({ lastname: s.lastname, firstname: s.firstname }))
-         if (dbStudents.length > 0) {
-            // Si des élèves existent en DB, afficher seulement ceux-là (sans lignes vides)
+      const dbStudents = students.map(s => ({ lastname: s.lastname, firstname: s.firstname }))
+      const isPristine = studentInputs.length === MIN_ROWS && studentInputs.every(s => !s.lastname && !s.firstname)
+
+      if (dbStudents.length > 0) {
+         // Sync depuis la DB quand les inputs sont vierges OU déjà fermés (changement de projet)
+         if (isPristine || isStudentInputClosed) {
             setStudentInputs(dbStudents)
-            setIsStudentInputClosed(true) // Marquer comme fermé car ce sont des élèves existants
-         } else {
-            // Si aucun élève en DB, s'assurer que la saisie est ouverte
-            setIsStudentInputClosed(false)
+            setIsStudentInputClosed(true)
          }
-      } else if (students.length === 0 && isStudentInputClosed) {
-         // Si la DB est vide mais que la saisie est fermée (ex: changement de projet), on réinitialise
+      } else if (isStudentInputClosed) {
+         // DB vide mais saisie fermée (ex: changement de projet) → réinitialiser
          setStudentInputs(Array.from({ length: MIN_ROWS }, () => ({ lastname: '', firstname: '' })))
          setIsStudentInputClosed(false)
       }

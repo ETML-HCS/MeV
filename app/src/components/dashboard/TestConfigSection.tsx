@@ -137,10 +137,11 @@ export const TestConfigSection = ({
             </div>
             <div className="px-5 py-4">
                {/* Ligne 1 — Champs principaux */}
-               <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-2 xl:grid-cols-[1fr_0.7fr_auto_0.7fr_auto_auto_auto_auto]">
+               <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-2 xl:grid-cols-[1fr_0.7fr_auto_auto_auto_0.7fr_auto_auto_auto]">
                   <div>
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Module</label>
                      <input
+                        maxLength={20}
                         className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                         value={settings.moduleName}
                         onChange={(e) => onUpdateSettings({ ...settings, moduleName: e.target.value })}
@@ -211,6 +212,7 @@ export const TestConfigSection = ({
                   <div>
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Correcteur</label>
                      <input
+                        maxLength={20}
                         className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                         value={settings.correctedBy}
                         onChange={(e) => onUpdateSettings({ ...settings, correctedBy: e.target.value })}
