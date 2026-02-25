@@ -17,6 +17,7 @@ interface ObjectivesViewProps {
   onSave: (objective: Objective) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onReorder: (objectives: Objective[]) => Promise<void>
+  scoringMode?: '0-3' | 'points'
 }
 
 const createIndicator = (questionNumber?: number): Indicator => ({
@@ -35,7 +36,7 @@ const createIndicator = (questionNumber?: number): Indicator => ({
   questionNumber,
 })
 
-export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeViewMode, onSave, onDelete, onReorder }: ObjectivesViewProps) => {
+export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeViewMode, onSave, onDelete, onReorder, scoringMode = '0-3' }: ObjectivesViewProps) => {
   const queryClient = useQueryClient()
   const [title, setTitle] = useState('')
   const [showQuickImport, setShowQuickImport] = useState(false)
@@ -373,7 +374,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
     return () => window.removeEventListener('keydown', handler)
   }, [onChangeViewMode])
 
-  const isPointsMode = project?.settings?.scoringMode === 'points'
+  const isPointsMode = scoringMode === 'points'
 
   return (
     <section className="space-y-8">

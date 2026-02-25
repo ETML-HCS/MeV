@@ -769,13 +769,15 @@ function App() {
           grids={grids}
           viewMode={settings.objectivesViewMode || 'objectives'}
           onChangeViewMode={(mode) => persistSettings({ ...settings, objectivesViewMode: mode })}
+          scoringMode={settings.scoringMode}
           onSave={async (objective) => {
+            const isPoints = settings.scoringMode === 'points'
             await upsert.mutateAsync({
               ...objective,
-              weight: Math.max(1, Math.round(objective.weight)),
+              weight: isPoints ? Math.max(1, objective.weight) : Math.max(1, Math.round(objective.weight)),
               indicators: objective.indicators.map((indicator) => ({
                 ...indicator,
-                weight: Math.max(1, Math.min(9, Math.round(indicator.weight))),
+                weight: isPoints ? Math.max(0.5, indicator.weight) : Math.max(1, Math.min(9, Math.round(indicator.weight))),
               })),
             })
           }}
