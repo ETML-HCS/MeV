@@ -373,6 +373,8 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
     return () => window.removeEventListener('keydown', handler)
   }, [onChangeViewMode])
 
+  const isPointsMode = project?.settings?.scoringMode === 'points'
+
   return (
     <section className="space-y-8">
       {/* SQUELETTES DISPONIBLES */}
@@ -650,15 +652,16 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                               <option key={level} value={level}>{level}</option>
                             ))}
                           </select>
-                          <span className="text-[10px] text-slate-400">Poids :</span>
+                          <span className="text-[10px] text-slate-400">{isPointsMode ? 'Pts Max :' : 'Poids :'}</span>
                           <input
                             type="number"
-                            min={1}
-                            max={9}
+                            min={isPointsMode ? 0.5 : 1}
+                            max={isPointsMode ? 100 : 9}
+                            step={isPointsMode ? "0.5" : "1"}
                             value={indicator.weight}
                             onChange={(e) => {
                               const parsed = Number(e.target.value)
-                              const next = Number.isFinite(parsed) ? Math.max(1, Math.min(9, Math.round(parsed))) : 1
+                              const next = Number.isFinite(parsed) ? (isPointsMode ? Math.max(0.5, parsed) : Math.max(1, Math.min(9, Math.round(parsed)))) : 1
                               onSave({
                                 ...objective,
                                 indicators: objective.indicators.map((entry) =>
@@ -718,31 +721,33 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                         </div>
 
                         {/* Remarks */}
-                        <div className="flex items-center gap-1.5">
-                          {[3, 2, 1, 0].map((pts) => (
-                            <div key={pts} className="flex items-center gap-1">
-                              <span className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${
-                                pts === 3 ? 'bg-emerald-100 text-emerald-700' :
-                                pts === 2 ? 'bg-amber-100 text-amber-700' :
-                                pts === 1 ? 'bg-orange-100 text-orange-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>{pts}</span>
-                              <input
-                                value={indicator.remarks[pts as 0|1|2|3]}
-                                onChange={(e) => debouncedSave({
-                                  ...objective,
-                                  indicators: objective.indicators.map((entry) =>
-                                    entry.id === indicator.id
-                                      ? { ...entry, remarks: { ...entry.remarks, [pts]: e.target.value } }
-                                      : entry
-                                  ),
-                                })}
-                                className="w-24 text-[11px] rounded-lg border border-slate-300 px-1.5 py-0.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                                placeholder={`${pts}pt`}
-                              />
-                            </div>
-                          ))}
-                        </div>
+                        {!isPointsMode && (
+                          <div className="flex items-center gap-1.5">
+                            {[3, 2, 1, 0].map((pts) => (
+                              <div key={pts} className="flex items-center gap-1">
+                                <span className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${
+                                  pts === 3 ? 'bg-emerald-100 text-emerald-700' :
+                                  pts === 2 ? 'bg-amber-100 text-amber-700' :
+                                  pts === 1 ? 'bg-orange-100 text-orange-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>{pts}</span>
+                                <input
+                                  value={indicator.remarks[pts as 0|1|2|3]}
+                                  onChange={(e) => debouncedSave({
+                                    ...objective,
+                                    indicators: objective.indicators.map((entry) =>
+                                      entry.id === indicator.id
+                                        ? { ...entry, remarks: { ...entry.remarks, [pts]: e.target.value } }
+                                        : entry
+                                    ),
+                                  })}
+                                  className="w-24 text-[11px] rounded-lg border border-slate-300 px-1.5 py-0.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                  placeholder={`${pts}pt`}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Delete button */}
@@ -854,8 +859,8 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 min-w-64">Comportement</th>
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 min-w-52">Conditions</th>
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 min-w-52">Résultats</th>
-                      <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-16">Poids</th>
-                      <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-44">Critères (3-2-1-0)</th>
+                      <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-16">{isPointsMode ? 'Pts Max' : 'Poids'}</th>
+                      {!isPointsMode && <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-44">Critères (3-2-1-0)</th>}
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-16">Action</th>
                     </tr>
                   </thead>
@@ -956,13 +961,13 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                         <td className="px-3 py-2 align-top">
                           <input
                             type="number"
-                            step="1"
-                            min={1}
-                            max={9}
+                            step={isPointsMode ? "0.5" : "1"}
+                            min={isPointsMode ? 0.5 : 1}
+                            max={isPointsMode ? 100 : 9}
                             value={indicator.weight}
                             onChange={(e) => {
                               const parsed = Number(e.target.value)
-                              const nextWeight = Number.isFinite(parsed) ? Math.max(1, Math.min(9, Math.round(parsed))) : 1
+                              const nextWeight = Number.isFinite(parsed) ? (isPointsMode ? Math.max(0.5, parsed) : Math.max(1, Math.min(9, Math.round(parsed)))) : 1
                               onSave({
                                 ...objective,
                                 indicators: objective.indicators.map((entry) =>
@@ -974,30 +979,32 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                           />
                         </td>
                         
-                        <td className="px-3 py-2 align-top">
-                          <div className="space-y-1.5">
-                            {[3, 2, 1, 0].map((points) => (
-                              <div key={points} className="flex gap-1.5">
-                                <span className="shrink-0 w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-[10px] font-bold text-slate-600">
-                                  {points}
-                                </span>
-                                <input
-                                  value={indicator.remarks[points as keyof typeof indicator.remarks]}
-                                  onChange={(e) => debouncedSave({
-                                    ...objective,
-                                    indicators: objective.indicators.map((entry) =>
-                                      entry.id === indicator.id
-                                        ? { ...entry, remarks: { ...entry.remarks, [points]: e.target.value } }
-                                        : entry
-                                    ),
-                                  })}
-                                  className="flex-1 min-w-0 text-xs rounded-lg border border-slate-300 px-2 py-0.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                                  placeholder={`${points}pt`}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </td>
+                        {!isPointsMode && (
+                          <td className="px-3 py-2 align-top">
+                            <div className="space-y-1.5">
+                              {[3, 2, 1, 0].map((points) => (
+                                <div key={points} className="flex gap-1.5">
+                                  <span className="shrink-0 w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-[10px] font-bold text-slate-600">
+                                    {points}
+                                  </span>
+                                  <input
+                                    value={indicator.remarks[points as keyof typeof indicator.remarks]}
+                                    onChange={(e) => debouncedSave({
+                                      ...objective,
+                                      indicators: objective.indicators.map((entry) =>
+                                        entry.id === indicator.id
+                                          ? { ...entry, remarks: { ...entry.remarks, [points]: e.target.value } }
+                                          : entry
+                                      ),
+                                    })}
+                                    className="flex-1 min-w-0 text-xs rounded-lg border border-slate-300 px-2 py-0.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                                    placeholder={`${points}pt`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        )}
                         
                         <td className="px-3 py-2 align-top">
                           <button

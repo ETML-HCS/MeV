@@ -16,7 +16,7 @@ export interface Indicator {
   id: string
   taxonomy: string
   behavior: string
-  weight: number
+  weight: number // Utilisé comme pourcentage (mode 0-3) ou comme points max (mode points directs)
   conditions: string
   expectedResults: string
   remarks: Record<0 | 1 | 2 | 3, string>
@@ -67,7 +67,7 @@ export interface EvaluationTemplate {
 export interface Evaluation {
   objectiveId: string
   indicatorId: string
-  score: 0 | 1 | 2 | 3 | null
+  score: number | null // 0,1,2,3 (mode classique) ou 0 à N (mode points directs)
   customRemark: string
   calculatedPoints: number
   selected: boolean // Pour les examens où l'élève choisit ses questions
@@ -95,6 +95,7 @@ export interface AppSettings {
   moduleName: string
   testIdentifier: string
   testType: 'formatif' | 'sommatif'
+  scoringMode: '0-3' | 'points' // Mode de notation: échelle 0-3 ou points directs
   moduleDescription: string
   correctedBy: string
   showObjectives: boolean

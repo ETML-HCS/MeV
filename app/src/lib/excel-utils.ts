@@ -87,6 +87,7 @@ export const exportSynthesisWorkbook = (
   objectives: Objective[],
   students: Student[],
   grids: StudentGrid[],
+  _scoringMode: '0-3' | 'points' = '0-3'
 ): Blob => {
   const workbook = XLSX.utils.book_new()
   const matrix: (string | number)[][] = [['Objectif / Indicateur', ...students.map((student) => `${student.lastname} ${student.firstname}`)]]
@@ -104,6 +105,23 @@ export const exportSynthesisWorkbook = (
       matrix.push(row)
     })
   })
+
+  // Ajouter une ligne pour les totaux
+  const totalsRow: (string | number)[] = ['Total des points']
+  students.forEach((student) => {
+    const grid = grids.find((item) => item.studentId === student.id)
+    totalsRow.push(grid?.totalPoints ?? '')
+  })
+  matrix.push([]) // Ligne vide pour séparer
+  matrix.push(totalsRow)
+
+  // Ajouter une ligne pour les notes
+  const gradesRow: (string | number)[] = ['Note finale']
+  students.forEach((student) => {
+    const grid = grids.find((item) => item.studentId === student.id)
+    gradesRow.push(grid?.finalGrade ?? '')
+  })
+  matrix.push(gradesRow)
 
   const worksheet = XLSX.utils.aoa_to_sheet(matrix)
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Synthese')

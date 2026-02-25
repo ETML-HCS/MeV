@@ -20,7 +20,7 @@ export const TestConfigSection = ({
 }: TestConfigSectionProps) => {
    const [confirm, confirmDialogProps] = useConfirm()
 
-   const { maxPoints: gridMaxPoints } = calculateGridTotals(objectives, [])
+   const { maxPoints: gridMaxPoints } = calculateGridTotals(objectives, [], settings.scoringMode)
 
    // Calculer le max effectif selon le nombre de questions à répondre
    const totalQuestions = objectives.reduce((sum, o) => sum + o.indicators.length, 0)
@@ -43,7 +43,7 @@ export const TestConfigSection = ({
             }
          }
       }
-      const { maxPoints: limitedMaxPoints } = calculateGridTotals(objectives, fakeEvals)
+      const { maxPoints: limitedMaxPoints } = calculateGridTotals(objectives, fakeEvals, settings.scoringMode)
       effectiveMaxPoints = limitedMaxPoints
    }
 
@@ -181,6 +181,31 @@ export const TestConfigSection = ({
                               {t}
                            </button>
                         ))}
+                     </div>
+                  </div>
+                  <div>
+                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Notation</label>
+                     <div className="inline-flex rounded-md overflow-hidden border border-slate-200 bg-white">
+                        <button
+                           onClick={() => onUpdateSettings({ ...settings, scoringMode: '0-3' })}
+                           className={`px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-300 ${
+                              settings.scoringMode === '0-3' || !settings.scoringMode
+                                 ? 'bg-slate-800 text-white shadow-sm'
+                                 : 'bg-white text-slate-500 hover:bg-slate-50'
+                           }`}
+                        >
+                           0-3
+                        </button>
+                        <button
+                           onClick={() => onUpdateSettings({ ...settings, scoringMode: 'points' })}
+                           className={`px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-300 ${
+                              settings.scoringMode === 'points'
+                                 ? 'bg-slate-800 text-white shadow-sm'
+                                 : 'bg-white text-slate-500 hover:bg-slate-50'
+                           }`}
+                        >
+                           Points
+                        </button>
                      </div>
                   </div>
                   <div>

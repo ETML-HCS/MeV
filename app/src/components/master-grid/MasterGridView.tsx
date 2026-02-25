@@ -37,7 +37,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
   const [templateName, setTemplateName] = useState('')
   const [templateDescription, setTemplateDescription] = useState('')
   const [confirmFn, confirmDialogProps] = useConfirm()
-  const { maxPoints } = calculateGridTotals(objectives, [])
+  const { maxPoints } = calculateGridTotals(objectives, [], settings.scoringMode)
   const totalIndicators = objectives.reduce((sum, objective) => sum + objective.indicators.length, 0)
 
   // Charger les templates disponibles
@@ -281,7 +281,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
                         Objectif {objective.number}
                       </td>
                       <td className="border border-slate-200 px-4 py-2 text-center text-xs font-bold text-orange-700">
-                        {objectiveIndicatorsWeight}
+                        {settings.scoringMode === 'points' ? objectiveIndicatorsWeight : objectiveIndicatorsWeight}
                       </td>
                       <td className="border border-slate-200 px-4 py-2" colSpan={4}>
                       </td>

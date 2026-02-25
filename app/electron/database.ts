@@ -454,6 +454,7 @@ export function createProject(name: string, description: string = ''): Evaluatio
     moduleName: name,
     testIdentifier: '',
     testType: 'sommatif',
+    scoringMode: '0-3',
     moduleDescription: description || '',
     correctedBy: '',
     showObjectives: true,

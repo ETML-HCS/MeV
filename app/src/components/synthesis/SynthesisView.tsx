@@ -15,10 +15,19 @@ interface SynthesisViewProps {
   moduleName?: string
   correctedBy?: string
   schoolName?: string
+  scoringMode?: '0-3' | 'points'
 }
 
-const colorForScore = (score: number | null | undefined) => {
+const colorForScore = (score: number | null | undefined, maxPoints?: number, scoringMode: '0-3' | 'points' = '0-3') => {
   if (score === null || score === undefined) return 'bg-white text-slate-300'
+  if (scoringMode === 'points') {
+    if (!maxPoints) return 'bg-white'
+    const ratio = score / maxPoints
+    if (ratio < 0.33) return 'bg-red-100 text-red-700'
+    if (ratio < 0.66) return 'bg-orange-100 text-orange-700'
+    if (ratio < 0.9) return 'bg-amber-100 text-amber-700'
+    return 'bg-emerald-100 text-emerald-700'
+  }
   if (score === 0) return 'bg-red-100 text-red-700'
   if (score === 1) return 'bg-orange-100 text-orange-700'
   if (score === 2) return 'bg-amber-100 text-amber-700'
@@ -35,7 +44,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url)
 }
 
-export const SynthesisView = ({ objectives, students, grids, testDate, testIdentifier = 'C216', moduleName = 'Module', correctedBy = '', schoolName }: SynthesisViewProps) => {
+export const SynthesisView = ({ objectives, students, grids, testDate, testIdentifier = 'C216', moduleName = 'Module', correctedBy = '', schoolName, scoringMode = '0-3' }: SynthesisViewProps) => {
   const [isExporting, setIsExporting] = useState(false)
   const [sortBy, setSortBy] = useState<'name' | 'grade'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
@@ -60,7 +69,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
             e => e.objectiveId === objective.id && e.indicatorId === indicator.id
           )
           if (evaluation?.score !== null && evaluation?.score !== undefined) {
-            total += calculateIndicatorPoints(indicator.weight * objective.weight, evaluation.score)
+            total += scoringMode === 'points' ? evaluation.score : calculateIndicatorPoints(indicator.weight * objective.weight, evaluation.score as 0|1|2|3)
             hasScore = true
           }
         }
@@ -69,7 +78,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
       if (hasScore) scored.add(student.id)
     }
     return { studentTotals: totals, scoredStudentIds: scored }
-  }, [evaluatedStudents, grids, objectives])
+  }, [evaluatedStudents, grids, objectives, scoringMode])
 
   // Trier les élèves
   const sortedStudents = useMemo(() => {
@@ -92,11 +101,11 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     let mp = 0
     for (const objective of objectives) {
       for (const indicator of objective.indicators) {
-        mp += calculateIndicatorPoints(indicator.weight * objective.weight, 3)
+        mp += scoringMode === 'points' ? indicator.weight : calculateIndicatorPoints(indicator.weight * objective.weight, 3)
       }
     }
     return mp
-  }, [objectives])
+  }, [objectives, scoringMode])
 
   const toSix = (pts: number) => maxPoints > 0 ? (pts / maxPoints * 6) : 0
 
@@ -131,7 +140,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
   }
 
   const exportExcel = () => {
-    const blob = exportSynthesisWorkbook(objectives, students, grids)
+    const blob = exportSynthesisWorkbook(objectives, students, grids, scoringMode)
     downloadBlob(blob, 'Synthese-Classe.xlsx')
   }
 
@@ -139,7 +148,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     setIsExporting(true)
     try {
       // HAUTE FIX #20: Use only evaluated students to match table display
-      const result = await generateBatchZip(evaluatedStudents, grids, objectives, testIdentifier, moduleName, correctedBy, testDate, schoolName)
+      const result = await generateBatchZip(evaluatedStudents, grids, objectives, testIdentifier, moduleName, correctedBy, testDate, schoolName, scoringMode)
       downloadBlob(result.blob, result.fileName)
     } finally {
       setIsExporting(false)
@@ -151,7 +160,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
     if (!grid) return
 
     try {
-      const blob = await generateStudentPdfBlob(student, grid, objectives, testIdentifier, moduleName, correctedBy, testDate, schoolName)
+      const blob = await generateStudentPdfBlob(student, grid, objectives, testIdentifier, moduleName, correctedBy, testDate, schoolName, scoringMode)
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
       // L'URL sera révoquée quand l'onglet sera fermé

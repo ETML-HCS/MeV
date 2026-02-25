@@ -472,7 +472,7 @@ const IndicatorBadges: React.FC<{
  * et la convertit en composants React-PDF (<Text>).
  * Supporte <span>, <strong>, <b>, <em>, <i> avec attribut style optionnel.
  */
-const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: React.ComponentProps<typeof Text>['style']): React.ReactElement | null => {
+const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: any): React.ReactElement | null => {
   if (!htmlString) return null
 
   // Si pas de balises HTML, retourner le texte brut
@@ -683,12 +683,17 @@ const IndicatorRow: React.FC<{
   objective: Objective
   evaluation: StudentGrid['evaluations'][number] | undefined
   isAlt: boolean
-}> = ({ indicator, objective, evaluation, isAlt }) => {
+  scoringMode: '0-3' | 'points'
+}> = ({ indicator, objective, evaluation, isAlt, scoringMode }) => {
   const weightFull = objective.weight * indicator.weight
-  const maxPts = weightFull * 3  // Multiplier par 3 (score maximal possible)
+  
+  const maxPts = scoringMode === 'points' 
+    ? indicator.weight 
+    : weightFull * 3
+    
   const earnedPts =
     evaluation?.score !== null && evaluation?.score !== undefined
-      ? calculateIndicatorPoints(weightFull, evaluation.score)
+      ? (scoringMode === 'points' ? evaluation.score : calculateIndicatorPoints(weightFull, evaluation.score))
       : 0
 
   const rowStyle = isAlt
@@ -697,8 +702,8 @@ const IndicatorRow: React.FC<{
 
   // Utiliser la remarque personnalisée ou la remarque par défaut selon le score
   let remark = evaluation?.customRemark || ''
-  if (!remark && evaluation?.score !== null && evaluation?.score !== undefined) {
-    remark = indicator.remarks[evaluation.score] || ''
+  if (!remark && evaluation?.score !== null && evaluation?.score !== undefined && scoringMode === '0-3') {
+    remark = indicator.remarks[evaluation.score as 0|1|2|3] || ''
   }
   // Tronquer les remarques trop longues pour éviter les débordements
   const truncatedRemark = remark.length > 150 ? remark.substring(0, 147) + '...' : remark
@@ -711,7 +716,15 @@ const IndicatorRow: React.FC<{
 
       <Text style={styles.behavior}>{indicator.behavior}</Text>
 
-      <ScoreDisplay score={evaluation?.score} />
+      {scoringMode === '0-3' ? (
+        <ScoreDisplay score={evaluation?.score} />
+      ) : (
+        <View style={styles.scoreBox}>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', color: COLORS.slate[700] }}>
+            {evaluation?.score !== null && evaluation?.score !== undefined ? evaluation.score : '—'}
+          </Text>
+        </View>
+      )}
 
       <Text style={styles.points}>
         {formatPointsClean(earnedPts)} / {formatPointsClean(maxPts)}
@@ -729,7 +742,8 @@ const ObjectiveBlock: React.FC<{
   objective: Objective
   grid: StudentGrid
   total: ObjectiveTotal
-}> = ({ objective, grid, total }) => {
+  scoringMode: '0-3' | 'points'
+}> = ({ objective, grid, total, scoringMode }) => {
   const percentageAchieved = total.maxPoints > 0
     ? ((total.points / total.maxPoints) * 100).toFixed(0)
     : '0'
@@ -764,6 +778,7 @@ const ObjectiveBlock: React.FC<{
               objective={objective}
               evaluation={evaluation}
               isAlt={idx % 2 === 1}
+              scoringMode={scoringMode}
             />
           )
         })
@@ -781,7 +796,8 @@ const ObjectiveBlock: React.FC<{
  */
 const calculateObjectiveTotals = (
   objectives: Objective[],
-  grid: StudentGrid
+  grid: StudentGrid,
+  scoringMode: '0-3' | 'points' = '0-3'
 ): ObjectiveTotalsMap => {
   const totals = new Map<string, ObjectiveTotal>()
 
@@ -795,11 +811,17 @@ const calculateObjectiveTotals = (
       )
       // HAUTE FIX #8: Check selected flag like calculateGridTotals does
       if (evaluation?.selected === false) continue
-      const maxPts = objective.weight * indicator.weight * 3  // Multiplier par 3 (score maximal)
+      
+      const maxPts = scoringMode === 'points' 
+        ? indicator.weight 
+        : objective.weight * indicator.weight * 3
+      
       objMaxPoints += maxPts
 
       if (evaluation?.score !== null && evaluation?.score !== undefined) {
-        objPoints += calculateIndicatorPoints(objective.weight * indicator.weight, evaluation.score)
+        objPoints += scoringMode === 'points'
+          ? evaluation.score
+          : calculateIndicatorPoints(objective.weight * indicator.weight, evaluation.score)
       }
     }
 
@@ -820,6 +842,7 @@ interface StudentDocumentProps {
   testIdentifier?: string
   moduleName?: string
   schoolName?: string
+  scoringMode?: '0-3' | 'points'
 }
 
 const StudentDocument: React.FC<StudentDocumentProps> = ({
@@ -829,8 +852,9 @@ const StudentDocument: React.FC<StudentDocumentProps> = ({
   testIdentifier = 'evaluation',
   moduleName = 'Module',
   schoolName,
+  scoringMode = '0-3'
 }) => {
-  const objectiveTotals = calculateObjectiveTotals(objectives, grid)
+  const objectiveTotals = calculateObjectiveTotals(objectives, grid, scoringMode)
   const modulePrefix = moduleName.substring(0, 4).toUpperCase()
 
   return (
@@ -865,6 +889,7 @@ const StudentDocument: React.FC<StudentDocumentProps> = ({
                   objective={objective}
                   grid={grid}
                   total={objectiveTotals.get(objective.id) ?? { points: 0, maxPoints: 0 }}
+                  scoringMode={scoringMode}
                 />
                 {idx < objectives.length - 1 && <View style={{ marginBottom: 6 }} />}
               </View>
@@ -902,7 +927,8 @@ export const generateStudentPdfBlob = async (
   moduleName?: string,
   correctedBy?: string,
   fallbackTestDate?: string,
-  schoolName?: string
+  schoolName?: string,
+  scoringMode: '0-3' | 'points' = '0-3'
 ): Promise<Blob> => {
   // Utiliser testDateOverride si définie (pour élèves absents), sinon la date de la grille, ou la date de fallback
   const gridWithDate = {
@@ -910,7 +936,7 @@ export const generateStudentPdfBlob = async (
     testDate: grid.testDateOverride || grid.testDate || fallbackTestDate,
     correctedBy: grid.correctedBy || correctedBy,
   }
-  return pdf(<StudentDocument student={student} grid={gridWithDate} objectives={objectives} testIdentifier={testIdentifier} moduleName={moduleName} schoolName={schoolName} />).toBlob()
+  return pdf(<StudentDocument student={student} grid={gridWithDate} objectives={objectives} testIdentifier={testIdentifier} moduleName={moduleName} schoolName={schoolName} scoringMode={scoringMode} />).toBlob()
 }
 
 /**
@@ -924,7 +950,8 @@ export const generateBatchZip = async (
   moduleName: string,
   correctedBy?: string,
   fallbackTestDate?: string,
-  schoolName?: string
+  schoolName?: string,
+  scoringMode: '0-3' | 'points' = '0-3'
 ): Promise<PdfBatchZipResult> => {
   const zip = new JSZip()
   const errors: Array<{ student: string; error: string }> = []
@@ -955,7 +982,8 @@ export const generateBatchZip = async (
         moduleName,
         correctedBy,
         fallbackTestDate,
-        schoolName
+        schoolName,
+        scoringMode
       )
       const fileName = `evaluation_${modulePrefix}_${testIdentifier}-${student.lastname}-${student.firstname}.pdf`
       zip.file(fileName, blob)

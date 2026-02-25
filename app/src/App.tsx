@@ -45,7 +45,7 @@ function App() {
 
   const { students, replaceAll, saveStudent } = useStudents()
   const { objectives, upsert, remove, reorder, replaceAll: replaceAllObjectives } = useObjectives()
-  const { grid, saveGrid, markAsCompleted, markAsIncomplete, updateTestDateOverride, saveStatus } = useEvaluation(selectedStudentId, objectives)
+  const { grid, saveGrid, markAsCompleted, markAsIncomplete, updateTestDateOverride, saveStatus } = useEvaluation(selectedStudentId, objectives, settings.scoringMode)
 
   const gridsQuery = useQuery({
     queryKey: ['grids', activeProjectId],

@@ -21,6 +21,7 @@ interface EvaluationViewProps {
   onMarkAsCompleted: () => void
   onMarkAsIncomplete: () => void
   onUpdateTestDateOverride: (date: string | undefined) => void
+  scoringMode?: '0-3' | 'points'
 }
 
 const SCORE_OPTIONS = [
@@ -56,6 +57,7 @@ export const EvaluationView = ({
   onMarkAsCompleted,
   onMarkAsIncomplete,
   onUpdateTestDateOverride,
+  scoringMode = '0-3',
 }: EvaluationViewProps) => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [showOnlyUngraded, setShowOnlyUngraded] = useState(false)
@@ -145,7 +147,7 @@ export const EvaluationView = ({
     return () => clearTimeout(timer)
   }, [evaluations, onSave, readOnly])
 
-  const totals = useMemo(() => calculateGridTotals(objectives, evaluations), [objectives, evaluations])
+  const totals = useMemo(() => calculateGridTotals(objectives, evaluations, scoringMode), [objectives, evaluations, scoringMode])
   // HAUTE FIX #18: Memoize finalGrade calculation
   const finalGrade = useMemo(
     () => calculateFinalGrade(totals.totalPoints, totals.maxPoints, threshold, correctionError),
@@ -332,7 +334,7 @@ export const EvaluationView = ({
     onUpdateTestDateOverride(date)
   }
 
-  const setScoreForIndicator = (objectiveId: string, indicatorId: string, score: 0 | 1 | 2 | 3 | null) => {
+  const setScoreForIndicator = (objectiveId: string, indicatorId: string, score: number | null) => {
     const objective = objectives.find((entry) => entry.id === objectiveId)
     const indicator = objective?.indicators.find((entry) => entry.id === indicatorId)
     if (!objective || !indicator) return
@@ -350,7 +352,7 @@ export const EvaluationView = ({
       indicatorId,
       score,
       customRemark: existing?.customRemark ?? '',
-      calculatedPoints: score === null ? 0 : calculateIndicatorPoints(indicator.weight * objective.weight, score),
+      calculatedPoints: score === null ? 0 : (scoringMode === 'points' ? score : calculateIndicatorPoints(indicator.weight * objective.weight, score as 0|1|2|3)),
       selected: shouldBeSelected,
     })
   }
@@ -427,7 +429,7 @@ export const EvaluationView = ({
       const [objectiveId, indicatorId] = focusedKey.split('__')
       if (!objectiveId || !indicatorId) return
 
-      if (['0', '1', '2', '3'].includes(event.key)) {
+      if (scoringMode === '0-3' && ['0', '1', '2', '3'].includes(event.key)) {
         event.preventDefault()
         const nextScore = Number(event.key) as 0 | 1 | 2 | 3
         const existing = evaluations.find(
@@ -808,7 +810,7 @@ export const EvaluationView = ({
             const objPoints = objEvals.reduce((sum, e) => sum + e.calculatedPoints, 0)
             // HAUTE FIX #5: Include ×3 multiplier for max score
             const objMaxPoints = objective.indicators.reduce(
-              (sum, ind) => sum + (ind.weight * objective.weight * 3),
+              (sum, ind) => sum + (scoringMode === 'points' ? ind.weight : ind.weight * objective.weight * 3),
               0
             )
             const visibleIndicators = objective.indicators.filter((indicator) => {
@@ -871,7 +873,7 @@ export const EvaluationView = ({
                     const points =
                       currentScore === null || currentScore === undefined
                         ? 0
-                        : calculateIndicatorPoints(indicator.weight * objective.weight, currentScore)
+                        : (scoringMode === 'points' ? currentScore : calculateIndicatorPoints(indicator.weight * objective.weight, currentScore as 0|1|2|3))
 
                     return (
                       <div key={indicator.id} className={`px-4 py-3 transition-opacity ${!isSelected ? 'opacity-40' : ''}`}>
@@ -912,40 +914,67 @@ export const EvaluationView = ({
                             )}
                             
                             {/* Score buttons */}
-                            <div className="flex items-center gap-2 mt-2.5">
-                              {SCORE_OPTIONS.map((option) => {
-                                const isScoreSelected = currentScore === option.value
-                                return (
-                                  <button
-                                    key={option.value}
-                                    disabled={readOnly}
-                                    onClick={() => {
-                                      const score = isScoreSelected ? null : option.value
-                                      setScoreForIndicator(objective.id, indicator.id, score as 0 | 1 | 2 | 3 | null)
-                                      if (focusMode) {
-                                        goToNextFocus()
+                            {scoringMode === '0-3' ? (
+                              <div className="flex items-center gap-2 mt-2.5">
+                                {SCORE_OPTIONS.map((option) => {
+                                  const isScoreSelected = currentScore === option.value
+                                  return (
+                                    <button
+                                      key={option.value}
+                                      disabled={readOnly}
+                                      onClick={() => {
+                                        const score = isScoreSelected ? null : option.value
+                                        setScoreForIndicator(objective.id, indicator.id, score as 0 | 1 | 2 | 3 | null)
+                                        if (focusMode) {
+                                          goToNextFocus()
+                                        }
+                                      }}
+                                      title={`${option.value} pts — ${option.desc}`}
+                                      className={`
+                                        w-10 h-10 rounded-lg text-sm font-bold transition-all
+                                        ${isScoreSelected
+                                          ? `${option.color} ${option.textColor} shadow-md scale-110 ring-2 ring-offset-2 ${option.ringClass}`
+                                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:scale-105'
+                                        }
+                                        ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'}
+                                      `}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 mt-2.5">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={indicator.weight}
+                                  step={0.5}
+                                  disabled={readOnly}
+                                  value={currentScore ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    if (val === '') {
+                                      setScoreForIndicator(objective.id, indicator.id, null)
+                                    } else {
+                                      const num = Number(val)
+                                      if (!isNaN(num)) {
+                                        setScoreForIndicator(objective.id, indicator.id, Math.min(Math.max(0, num), indicator.weight))
                                       }
-                                    }}
-                                    title={`${option.value} pts — ${option.desc}`}
-                                    className={`
-                                      w-10 h-10 rounded-lg text-sm font-bold transition-all
-                                      ${isScoreSelected
-                                        ? `${option.color} ${option.textColor} shadow-md scale-110 ring-2 ring-offset-2 ${option.ringClass}`
-                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:scale-105'
-                                      }
-                                      ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'}
-                                    `}
-                                  >
-                                    {option.label}
-                                  </button>
-                                )
-                              })}
-                            </div>
+                                    }
+                                  }}
+                                  className="w-20 h-10 rounded-lg border border-slate-300 px-3 text-center font-bold text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                  placeholder="Pts"
+                                />
+                                <span className="text-sm text-slate-500 font-medium">/ {indicator.weight}</span>
+                              </div>
+                            )}
 
                             {/* Remark for selected score */}
-                            {currentScore !== null && currentScore !== undefined && (
+                            {scoringMode === '0-3' && currentScore !== null && currentScore !== undefined && (
                               <div className="mt-1.5 text-xs text-slate-500 italic">
-                                {indicator.remarks[currentScore]}
+                                {indicator.remarks[currentScore as 0|1|2|3]}
                               </div>
                             )}
 
@@ -962,7 +991,7 @@ export const EvaluationView = ({
                                   calculatedPoints:
                                     existing?.score === null || existing?.score === undefined
                                       ? 0
-                                      : calculateIndicatorPoints(indicator.weight * objective.weight, existing.score),
+                                      : (scoringMode === 'points' ? existing.score : calculateIndicatorPoints(indicator.weight * objective.weight, existing.score as 0|1|2|3)),
                                   selected: existing?.selected ?? (maxQuestionsToAnswer === null),
                                 })
                               }
@@ -1013,7 +1042,7 @@ export const EvaluationView = ({
             const points =
               currentScore === null || currentScore === undefined
                 ? 0
-                : calculateIndicatorPoints(indicator.weight * objective.weight, currentScore)
+                : (scoringMode === 'points' ? currentScore : calculateIndicatorPoints(indicator.weight * objective.weight, currentScore as 0|1|2|3))
 
             return (
               <article key={row.key} className={`bg-white rounded-xl border border-slate-200 shadow-sm ${!isSelected ? 'opacity-40' : ''}`}>
@@ -1055,38 +1084,65 @@ export const EvaluationView = ({
                       )}
 
                       <div className="flex items-center gap-1.5 mt-2.5">
-                        {SCORE_OPTIONS.map((option) => {
-                          const isScoreSelected = currentScore === option.value
-                          return (
-                            <button
-                              key={option.value}
+                        {scoringMode === '0-3' ? (
+                          SCORE_OPTIONS.map((option) => {
+                            const isScoreSelected = currentScore === option.value
+                            return (
+                              <button
+                                key={option.value}
+                                disabled={readOnly}
+                                onClick={() => {
+                                  const score = isScoreSelected ? null : option.value
+                                  setScoreForIndicator(objective.id, indicator.id, score as 0 | 1 | 2 | 3 | null)
+                                  if (focusMode) {
+                                    goToNextFocus()
+                                  }
+                                }}
+                                title={`${option.value} pts — ${option.desc}`}
+                                className={`
+                                  w-8 h-8 rounded-md text-xs font-bold transition-all
+                                  ${isScoreSelected
+                                    ? `${option.color} ${option.textColor} shadow-md scale-110 ring-2 ring-offset-2 ${option.ringClass}`
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:scale-105'
+                                  }
+                                  ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'}
+                                `}
+                              >
+                                {option.label}
+                              </button>
+                            )
+                          })
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={indicator.weight}
+                              step={0.5}
                               disabled={readOnly}
-                              onClick={() => {
-                                const score = isScoreSelected ? null : option.value
-                                setScoreForIndicator(objective.id, indicator.id, score as 0 | 1 | 2 | 3 | null)
-                                if (focusMode) {
-                                  goToNextFocus()
+                              value={currentScore ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value
+                                if (val === '') {
+                                  setScoreForIndicator(objective.id, indicator.id, null)
+                                } else {
+                                  const num = Number(val)
+                                  if (!isNaN(num)) {
+                                    setScoreForIndicator(objective.id, indicator.id, Math.min(Math.max(0, num), indicator.weight))
+                                  }
                                 }
                               }}
-                              title={`${option.value} pts — ${option.desc}`}
-                              className={`
-                                w-8 h-8 rounded-md text-xs font-bold transition-all
-                                ${isScoreSelected
-                                  ? `${option.color} ${option.textColor} shadow-md scale-110 ring-2 ring-offset-2 ${option.ringClass}`
-                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:scale-105'
-                                }
-                                ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'}
-                              `}
-                            >
-                              {option.label}
-                            </button>
-                          )
-                        })}
+                              className="w-16 h-8 rounded-md border border-slate-300 px-2 text-center font-bold text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                              placeholder="Pts"
+                            />
+                            <span className="text-xs text-slate-500 font-medium">/ {indicator.weight}</span>
+                          </div>
+                        )}
                       </div>
 
-                      {currentScore !== null && currentScore !== undefined && (
+                      {scoringMode === '0-3' && currentScore !== null && currentScore !== undefined && (
                         <div className="mt-1.5 text-xs text-slate-500 italic">
-                          {indicator.remarks[currentScore]}
+                          {indicator.remarks[currentScore as 0|1|2|3]}
                         </div>
                       )}
 
@@ -1102,7 +1158,7 @@ export const EvaluationView = ({
                             calculatedPoints:
                               existing?.score === null || existing?.score === undefined
                                 ? 0
-                                : calculateIndicatorPoints(indicator.weight * objective.weight, existing.score),
+                                : (scoringMode === 'points' ? existing.score : calculateIndicatorPoints(indicator.weight * objective.weight, existing.score as 0|1|2|3)),
                             selected: existing?.selected ?? (maxQuestionsToAnswer === null),
                           })
                         }

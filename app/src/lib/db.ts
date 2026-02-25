@@ -70,6 +70,7 @@ export const defaultSettings: AppSettings = {
   schoolName: '',
   evaluationViewMode: 'objectives',
   objectivesViewMode: 'objectives',
+  scoringMode: '0-3'
 }
 
 export const getSettings = async (): Promise<AppSettings> => {

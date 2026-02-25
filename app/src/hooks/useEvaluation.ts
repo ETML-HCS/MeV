@@ -5,7 +5,7 @@ import { calculateFinalGrade, calculateGridTotals } from '../lib/calculations'
 import { useAppStore } from '../stores/useAppStore'
 import type { Evaluation, Objective, StudentGrid } from '../types'
 
-export const useEvaluation = (studentId: string | null, objectives: Objective[]) => {
+export const useEvaluation = (studentId: string | null, objectives: Objective[], scoringMode: '0-3' | 'points' = '0-3') => {
   const queryClient = useQueryClient()
   const settings = useAppStore((state) => state.settings)
   const activeProjectId = useAppStore((state) => state.activeProjectId)
@@ -24,7 +24,7 @@ export const useEvaluation = (studentId: string | null, objectives: Objective[])
     mutationFn: async (evaluations: Evaluation[]) => {
       if (!studentId) return
       setSaveStatus('saving')
-      const totals = calculateGridTotals(objectives, evaluations)
+      const totals = calculateGridTotals(objectives, evaluations, scoringMode)
       const existingGrid = await db.grids.get(studentId)
       const grid: StudentGrid = {
         studentId,

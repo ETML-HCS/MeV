@@ -26,7 +26,7 @@ export const calculateFinalGrade = (
 
 export const calculateIndicatorPoints = (weight: number, score: number): number => weight * score
 
-export const calculateGridTotals = (objectives: Objective[], evaluations: Evaluation[]) => {
+export const calculateGridTotals = (objectives: Objective[], evaluations: Evaluation[], scoringMode: '0-3' | 'points' = '0-3') => {
   const index = new Map(evaluations.map((evaluation) => [`${evaluation.objectiveId}-${evaluation.indicatorId}`, evaluation]))
   let totalPoints = 0
   let maxPoints = 0
@@ -38,10 +38,18 @@ export const calculateGridTotals = (objectives: Objective[], evaluations: Evalua
       
       // Ne compter que les questions sélectionnées
       if (!evaluation || evaluation.selected !== false) {
-        maxPoints += calculateIndicatorPoints(indicator.weight * objective.weight, 3)
-        const score = evaluation?.score
-        if (score !== null && score !== undefined) {
-          totalPoints += calculateIndicatorPoints(indicator.weight * objective.weight, score)
+        if (scoringMode === 'points') {
+          maxPoints += indicator.weight
+          const score = evaluation?.score
+          if (score !== null && score !== undefined) {
+            totalPoints += score
+          }
+        } else {
+          maxPoints += calculateIndicatorPoints(indicator.weight * objective.weight, 3)
+          const score = evaluation?.score
+          if (score !== null && score !== undefined) {
+            totalPoints += calculateIndicatorPoints(indicator.weight * objective.weight, score)
+          }
         }
       }
     })
