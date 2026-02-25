@@ -57,7 +57,6 @@ function findOldDatabase(): string | null {
     if (appName === currentFolderName) continue // Skip le nom actuel
     const oldDbPath = path.join(appDataRoot, appName, 'mev-evaluation.sqlite')
     if (fs.existsSync(oldDbPath)) {
-      console.log(`📦 Ancienne base de données trouvée : ${oldDbPath}`)
       return oldDbPath
     }
   }
@@ -73,7 +72,6 @@ function findOldDatabase(): string | null {
       if (lowerName.includes('mev') || lowerName.includes('evaluation')) {
         const oldDbPath = path.join(appDataRoot, entry.name, 'mev-evaluation.sqlite')
         if (fs.existsSync(oldDbPath)) {
-          console.log(`📦 Ancienne base de données trouvée (scan) : ${oldDbPath}`)
           return oldDbPath
         }
       }
@@ -96,9 +94,6 @@ export async function initDatabase(): Promise<void> {
   if (!fs.existsSync(dbPath)) {
     const oldDbPath = findOldDatabase()
     if (oldDbPath) {
-      console.log(`🔄 Migration de l'ancienne base de données...`)
-      console.log(`   Source : ${oldDbPath}`)
-      console.log(`   Destination : ${dbPath}`)
       try {
         // Copier l'ancienne base (on ne supprime pas l'originale par sécurité)
         fs.copyFileSync(oldDbPath, dbPath)
@@ -107,7 +102,6 @@ export async function initDatabase(): Promise<void> {
         const shmPath = oldDbPath + '-shm'
         if (fs.existsSync(walPath)) fs.copyFileSync(walPath, dbPath + '-wal')
         if (fs.existsSync(shmPath)) fs.copyFileSync(shmPath, dbPath + '-shm')
-        console.log(`✅ Ancienne base de données migrée avec succès !`)
       } catch (e) {
         console.error(`❌ Erreur lors de la migration de la base :`, e)
       }
@@ -673,7 +667,6 @@ export function flushMemoryToDatabase(
       new Date().toISOString(),
       projectId,
     )
-    console.log(`✅ Projet ${projectId} synchronisé en base (${students.length} élèves, ${objectives.length} objectifs, ${grids.length} grilles)`)
   } catch (error) {
     console.error('❌ Erreur lors de la synchronisation mémoire→DB :', error)
   }
@@ -683,11 +676,6 @@ export function flushMemoryToDatabase(
 export function exportDatabase(): string {
   const projects = getProjects()
   const settings = getSettings()
-
-  // Log pour diagnostiquer les problèmes de backup
-  for (const p of projects) {
-    console.log(`📋 Export projet "${p.name}" [${p.id.substring(0, 8)}...]: ${p.students.length} élèves, ${p.objectives.length} objectifs, ${p.grids.length} grilles`)
-  }
 
   return JSON.stringify(
     {

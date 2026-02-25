@@ -39,16 +39,16 @@ test('affiche le dashboard et permet de naviguer vers Objectifs', async ({ page 
   // Click outside to trigger the blur/save
   await page.getByRole('heading', { name: /ETML/i }).click()
 
-  // Click on "Fermer la saisie élèves" to save the students
-  await page.getByRole('button', { name: 'Fermer la saisie élèves' }).click()
+  // Click on "Valider la liste des élèves" to save the students
+  await page.getByRole('button', { name: 'Valider la liste des élèves' }).click()
 
   // Wait for the button to become enabled
-  const objectifsButton = page.locator('nav').getByRole('button', { name: 'Objectifs' })
+  const objectifsButton = page.locator('nav').getByRole('button', { name: /2\. Objectifs/ })
   await expect(objectifsButton).toBeEnabled()
 
   // Click on the "Objectifs" button in the navigation (first occurrence)
   await objectifsButton.click()
   
-  // Wait for the Objectives view to load by checking for the "Nouvel objectif d'évaluation" label
-  await expect(page.getByText("Nouvel objectif d'évaluation")).toBeVisible()
+  // Wait for the Objectives view to load by checking for the "Nouvel objectif..." placeholder
+  await expect(page.getByPlaceholder("Nouvel objectif...")).toBeVisible()
 })

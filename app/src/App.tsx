@@ -230,9 +230,8 @@ function App() {
         modulePrefix: project.modulePrefix,
         weightPercentage: project.weightPercentage,
       })
-      console.log('✅ Projet sauvegardé avant changement de contexte')
     } catch (e) {
-      console.error('❌ Erreur sauvegarde forcée :', e)
+      // Ignore error
     }
   }
 

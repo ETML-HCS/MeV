@@ -1001,17 +1001,6 @@ export const generateBatchZip = async (
 
   await Promise.all(pdfPromises)
 
-  // Log des résultats
-  if (successes.length > 0) {
-    console.log(`✓ ${successes.length} PDF générés avec succès`)
-  }
-  if (errors.length > 0) {
-    console.warn(`⚠ ${errors.length} erreur(s) lors de la génération:`)
-    errors.forEach(({ student, error }) => {
-      console.warn(`  - ${student}: ${error}`)
-    })
-  }
-
   // Format : module_YYYYMMDD.zip
   const today = new Date()
   const dateStr = today.toISOString().split('T')[0].replace(/-/g, '')

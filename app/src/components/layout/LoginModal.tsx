@@ -39,14 +39,11 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     setError('')
     setIsLoading(true)
     try {
-      console.log('Attempting to create user:', name.trim())
       await signup(name.trim())
-      console.log('User created successfully')
       setName('')
       onClose()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la création du profil'
-      console.error('Signup error:', error, errorMessage)
       setError(errorMessage)
     } finally {
       setIsLoading(false)

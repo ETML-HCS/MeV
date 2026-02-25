@@ -87,34 +87,28 @@ ipcMain.handle('db:getStudent', (_event, id: string) => {
 
 ipcMain.handle('db:saveStudent', (_event, student: Student) => {
   memoryStore.students.set(student.id, student)
-  console.log('saveStudent called:', student.id)
   return student.id
 })
 
 ipcMain.handle('db:bulkAddStudents', (_event, students: Student[]) => {
   students.forEach(s => memoryStore.students.set(s.id, s))
-  console.log('bulkAddStudents called:', students.length)
 })
 
 ipcMain.handle('db:bulkPutStudents', (_event, students: Student[]) => {
   students.forEach(s => memoryStore.students.set(s.id, s))
-  console.log('bulkPutStudents called:', students.length)
 })
 
 ipcMain.handle('db:clearStudents', () => {
   memoryStore.students.clear()
-  console.log('clearStudents called')
 })
 
 ipcMain.handle('db:replaceAllStudents', (_event, students: Student[]) => {
   memoryStore.students.clear()
   students.forEach(s => memoryStore.students.set(s.id, s))
-  console.log('replaceAllStudents called:', students.length)
 })
 
 ipcMain.handle('db:deleteStudent', (_event, id: string) => {
   memoryStore.students.delete(id)
-  console.log('deleteStudent called:', id)
 })
 
 // Objectives - stockés en mémoire, persistés via le projet
@@ -136,34 +130,28 @@ ipcMain.handle('db:getObjective', (_event, id: string) => {
 
 ipcMain.handle('db:saveObjective', (_event, objective: Objective) => {
   memoryStore.objectives.set(objective.id, objective)
-  console.log('saveObjective called:', objective.id)
   return objective.id
 })
 
 ipcMain.handle('db:bulkAddObjectives', (_event, objectives: Objective[]) => {
   objectives.forEach(o => memoryStore.objectives.set(o.id, o))
-  console.log('bulkAddObjectives called:', objectives.length)
 })
 
 ipcMain.handle('db:bulkPutObjectives', (_event, objectives: Objective[]) => {
   objectives.forEach(o => memoryStore.objectives.set(o.id, o))
-  console.log('bulkPutObjectives called:', objectives.length)
 })
 
 ipcMain.handle('db:clearObjectives', () => {
   memoryStore.objectives.clear()
-  console.log('clearObjectives called')
 })
 
 ipcMain.handle('db:deleteObjective', (_event, id: string) => {
   memoryStore.objectives.delete(id)
-  console.log('deleteObjective called:', id)
 })
 
 ipcMain.handle('db:reorderObjectives', (_event, objectives: Objective[]) => {
   memoryStore.objectives.clear()
   objectives.forEach(o => memoryStore.objectives.set(o.id, o))
-  console.log('reorderObjectives called:', objectives.length)
 })
 
 // Grids - stockés en mémoire, persistés via le projet
@@ -236,7 +224,6 @@ ipcMain.handle('db:bulkPutGrids', (_event, grids: StudentGrid[], projectId?: str
 
 ipcMain.handle('db:clearGrids', () => {
   memoryStore.grids.clear()
-  console.log('clearGrids called')
 })
 
 ipcMain.handle('db:markGridAsCompleted', (_event, studentId: string, projectId?: string) => {
@@ -290,7 +277,6 @@ ipcMain.handle('db:import', (_event, jsonData: string, merge: boolean) => {
   memoryStore.objectives.clear()
   memoryStore.grids.clear()
   currentProjectId = null
-  console.log('✅ Memory stores cleared after import')
 })
 
 // File operations

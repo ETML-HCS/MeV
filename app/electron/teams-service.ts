@@ -75,7 +75,6 @@ export async function startDeviceCodeAuth(
 
   if (!result?.accessToken) throw new Error('Authentification échouée : aucun token reçu')
   accessToken = result.accessToken
-  console.log(`✅ Teams auth OK (mode: ${usedEdu ? 'Education' : 'Teams basique'})`)
 }
 
 export function isAuthenticated(): boolean {
