@@ -16,7 +16,7 @@ Solution moderne Electron, offline-first, conçue pour remplacer l'ancienne solu
 - **Electron** (architecture multi-process)
 - **SQLite** (better-sqlite3) avec mode WAL
 - **Node.js** pour IPC handlers
-- **Microsoft Teams OAuth** (MSAL) pour authentification SSO
+- (en dev ?) **Microsoft Teams OAuth** (MSAL) pour authentification SSO
 
 ### Persistance
 - **Architecture hybride** : mémoire (session) + SQLite (permanent)
@@ -246,49 +246,49 @@ Dashboard → Sauvegarde → Importer
 
 ```
 app/
-├── electron/              # Code Node.js (main process)
-│   ├── main.ts           # Point d'entrée Electron
-│   ├── preload.ts        # Bridge IPC sécurisé
-│   ├── database.ts       # Opérations SQLite
-│   ├── ipc-handlers.ts   # Gestionnaires IPC
-│   └── teams-service.ts  # OAuth Microsoft Teams
+├── electron/                 # Code Node.js (main process)
+│   ├── main.ts               # Point d'entrée Electron
+│   ├── preload.ts            # Bridge IPC sécurisé
+│   ├── database.ts           # Opérations SQLite
+│   ├── ipc-handlers.ts       # Gestionnaires IPC
+│   └── teams-service.ts      # OAuth Microsoft Teams
 │
-├── src/                  # Code React (renderer process)
-│   ├── components/       # Composants UI
+├── src/                      # Code React (renderer process)
+│   ├── components/           # Composants UI
 │   │   ├── dashboard/   
 │   │   ├── students/    
 │   │   ├── objectives/  
 │   │   ├── evaluation/  
 │   │   ├── synthesis/   
-│   │   ├── grades/      # Notes par groupes labo
+│   │   ├── grades/          # Notes par groupes labo
 │   │   └── layout/      
 │   │
-│   ├── hooks/            # Hooks React Query
+│   ├── hooks/               # Hooks React Query
 │   │   ├── useStudents.ts
 │   │   ├── useObjectives.ts
 │   │   └── useEvaluation.ts
 │   │
-│   ├── lib/              # Logique métier
-│   │   ├── db.ts         # API base de données
+│   ├── lib/                  # Logique métier
+│   │   ├── db.ts             # API base de données
 │   │   ├── calculations.ts
 │   │   ├── pdf-generator.tsx
 │   │   └── excel-utils.ts
 │   │
-│   ├── stores/           # État global Zustand
+│   ├── stores/               # État global Zustand
 │   │   ├── useAppStore.ts
 │   │   └── useUserStore.ts
 │   │
-│   ├── types/            # Interfaces TypeScript
+│   ├── types/                # Interfaces TypeScript
 │   │   └── index.ts
 │   │
-│   └── utils/            # Utilitaires
+│   └── utils/                # Utilitaires
 │       ├── constants.ts
 │       ├── helpers.ts
-│       └── taxonomy.ts   # Niveaux Bloom
+│       └── taxonomy.ts       # Niveaux Bloom
 │
-├── public/               # Assets statiques
-├── scripts/              # Scripts migration
-└── tests/                # Tests E2E Playwright
+├── public/                   # Assets statiques
+├── scripts/                  # Scripts migration
+└── tests/                    # Tests E2E Playwright
 ```
 
 ---

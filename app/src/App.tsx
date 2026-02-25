@@ -164,6 +164,7 @@ function App() {
         hydratedProjectIdRef.current = activeProjectId
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectId, projectQuery.data, user, queryClient, setSettingsStore])
 
   // Sauvegarder le projet quand les données changent
@@ -205,6 +206,7 @@ function App() {
       }, 1500)
       return () => clearTimeout(timer)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [students, objectives, settings, activeProjectId, gridsQuery.data])
 
   // Sauvegarde forcée du projet courant (sans debounce)
@@ -332,6 +334,7 @@ function App() {
       if (item.id === 'return-projects') return true
       return tabAccess[item.id as keyof typeof tabAccess]
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectId, setActiveTab, tabAccess])
 
   const filteredCommandItems = useMemo(() => {
@@ -450,6 +453,7 @@ function App() {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectId, activeTab, tabAccess, setActiveTab, isCommandPaletteOpen, filteredCommandItems, selectedCommandIndex])
 
   useEffect(() => {

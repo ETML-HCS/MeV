@@ -123,8 +123,8 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
   if (objectives.length === 0) {
     return (
       <section className="space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-          <div className="mx-auto mb-4 w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+          <div className="mx-auto mb-4 w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
             <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.172a2 2 0 011.414.586l4.828 4.828A2 2 0 0119 9.828V19a2 2 0 01-2 2z" />
             </svg>
@@ -138,7 +138,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
 
   return (
     <section className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:p-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 lg:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Grille Master</h2>
@@ -207,7 +207,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
       </div>
 
       {/* Main Grid */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm table-fixed">
             <colgroup>
@@ -342,7 +342,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
                           {template.objectives.length} objectif{template.objectives.length > 1 ? 's' : ''}
                         </p>
                       </div>
-                      <button className="px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded hover:bg-purple-700 transition-colors">
+                      <button className="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700 transition-colors">
                         Importer
                       </button>
                     </div>
@@ -364,7 +364,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
             <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4">
               <button
                 onClick={() => setShowTemplateSelector(false)}
-                className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-100 transition-colors"
+                className="w-full px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Annuler
               </button>
@@ -414,7 +414,7 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="Ex: C216 IoT - Grille complète"
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                   autoFocus
                 />
               </div>
@@ -436,14 +436,14 @@ export const MasterGridView = ({ objectives, settings, onImportFromTemplate }: M
             <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3 rounded-b-xl">
               <button
                 onClick={() => setShowSaveTemplateModal(false)}
-                className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-100 transition-colors"
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSaveAsTemplate}
                 disabled={!templateName.trim() || saveTemplateMutation.isPending}
-                className="px-5 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
               >
                 {saveTemplateMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}
               </button>

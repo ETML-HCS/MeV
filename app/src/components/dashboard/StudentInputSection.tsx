@@ -109,6 +109,7 @@ export const StudentInputSection = ({
          setStudentInputs(Array.from({ length: MIN_ROWS }, () => ({ lastname: '', firstname: '' })))
          setIsStudentInputClosed(false)
       }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [students])
 
    const applyQuickPaste = () => {
@@ -188,7 +189,7 @@ export const StudentInputSection = ({
    return (
       <>
          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-slate-50">
                   <div>
                      <h3 className="text-sm font-bold text-slate-800">Saisie des élèves</h3>

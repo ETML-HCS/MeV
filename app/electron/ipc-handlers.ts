@@ -60,6 +60,14 @@ ipcMain.handle('db:createEvaluation', (_event, baseProjectId: string) => {
   return dbOperations.createEvaluation(baseProjectId)
 })
 
+ipcMain.handle('db:getProjectsWhere', (_event, field: string, value: any) => {
+  return dbOperations.getProjectsWhere(field, value)
+})
+
+ipcMain.handle('db:getProjectsSorted', (_event, field: string, ascending?: boolean) => {
+  return dbOperations.getProjectsSorted(field, ascending)
+})
+
 // Students - stockés en mémoire, persistés via le projet
 ipcMain.handle('db:getStudents', () => {
   return Array.from(memoryStore.students.values())
@@ -183,6 +191,21 @@ ipcMain.handle('db:saveGrid', (_event, grid: StudentGrid, projectId?: string) =>
   }
   
   return grid.studentId
+})
+
+ipcMain.handle('db:deleteGrid', (_event, studentId: string, projectId?: string) => {
+  // Supprimer de la mémoire
+  memoryStore.grids.delete(studentId)
+  
+  // Supprimer de la base de données
+  const resolvedProjectId = projectId ?? currentProjectId
+  if (resolvedProjectId) {
+    try {
+      dbOperations.deleteGrid(studentId, resolvedProjectId)
+    } catch (error) {
+      console.error('Failed to delete grid from database:', error)
+    }
+  }
 })
 
 ipcMain.handle('db:bulkAddGrids', (_event, grids: StudentGrid[], projectId?: string) => {

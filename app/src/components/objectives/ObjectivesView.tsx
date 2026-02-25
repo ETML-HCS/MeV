@@ -351,8 +351,6 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
     setShowQuickImport(false)
   }
 
-  const isWeightValid = (_weight: number) => true
-
   // Global shortcuts
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -379,7 +377,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
     <section className="space-y-8">
       {/* SQUELETTES DISPONIBLES */}
       {objectives.length === 0 && squelettesQuery.data && squelettesQuery.data.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-bold text-blue-900 mb-2">Squelettes disponibles pour ce module</h3>
           <p className="text-sm text-blue-700 mb-4">
             Nous avons trouvé des squelettes correspondant à votre module ({project?.modulePrefix}{project?.moduleNumber} - {project?.settings?.testIdentifier}). 
@@ -389,7 +387,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
             <select
               value={selectedSqueletteId}
               onChange={(e) => setSelectedSqueletteId(e.target.value)}
-              className="flex-1 max-w-md px-4 py-2.5 rounded-xl border border-blue-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+              className="flex-1 max-w-md px-4 py-2.5 rounded-lg border border-blue-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
             >
               <option value="">-- Choisir une version --</option>
               {squelettesQuery.data.map((t: ModuleTemplate) => (
@@ -401,7 +399,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
             <button
               onClick={handleApplySquelette}
               disabled={!selectedSqueletteId}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Importer le squelette
             </button>
@@ -499,7 +497,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
               <button
                 onClick={applyQuickImport}
                 disabled={!quickImportText.trim()}
-                className="px-5 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Importer
               </button>
@@ -510,7 +508,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
 
       {/* IMPORT TEMPLATE PANEL */}
       {showImportTemplate && (
-        <div className="bg-linear-to-br from-violet-50 to-blue-50 rounded-2xl border border-violet-200 p-6 shadow-sm">
+        <div className="bg-linear-to-br from-violet-50 to-blue-50 rounded-xl border border-violet-200 p-6 shadow-sm">
           <h4 className="text-sm font-bold text-slate-800 mb-2 flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Importer depuis un template existant
@@ -527,7 +525,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="flex-1 max-w-md px-4 py-2.5 rounded-xl border border-violet-300 bg-white text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none"
+                className="flex-1 max-w-md px-4 py-2.5 rounded-lg border border-violet-300 bg-white text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none"
               >
                 <option value="">-- Choisir un template --</option>
                 {evalTemplatesQuery.data.map((t: EvaluationTemplate) => (
@@ -539,7 +537,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
               <button
                 onClick={handleImportTemplate}
                 disabled={!selectedTemplateId}
-                className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Importer le template
               </button>
@@ -550,7 +548,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
 
       {/* SAVE AS TEMPLATE PANEL */}
       {showSaveTemplate && (
-        <div className="bg-linear-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6 shadow-sm">
+        <div className="bg-linear-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6 shadow-sm">
           <h4 className="text-sm font-bold text-slate-800 mb-2 flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
             Sauvegarder comme template réutilisable
@@ -565,7 +563,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Nom du template (ex: C216 IoT EP1 - Grille complète)"
-              className="rounded-xl border border-amber-300 px-4 py-2.5 text-sm bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
+              className="rounded-lg border border-amber-300 px-4 py-2.5 text-sm bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
               onKeyDown={(e) => e.key === 'Enter' && handleSaveAsTemplate()}
             />
             <input
@@ -573,12 +571,12 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
               value={templateDescription}
               onChange={(e) => setTemplateDescription(e.target.value)}
               placeholder="Description (optionnel)"
-              className="rounded-xl border border-amber-300 px-4 py-2.5 text-sm bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
+              className="rounded-lg border border-amber-300 px-4 py-2.5 text-sm bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
             />
             <button
               onClick={handleSaveAsTemplate}
               disabled={!templateName.trim() || isSavingTemplate}
-              className="self-start px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="self-start px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSavingTemplate ? '...' : null}
               Sauvegarder
@@ -631,7 +629,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                               }
                               onSave(updatedTarget)
                             }}
-                            className="text-xs rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-medium text-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
+                            className="text-xs rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 font-medium text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                           >
                             {objectives.map((o) => (
                               <option key={o.id} value={o.id}>O{o.number} · {o.title}</option>
@@ -646,7 +644,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 entry.id === indicator.id ? { ...entry, taxonomy: e.target.value } : entry
                               ),
                             })}
-                            className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
+                            className="text-xs rounded-lg border border-slate-300 bg-white px-2 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                           >
                             {TAXONOMY_LEVELS.map((level) => (
                               <option key={level} value={level}>{level}</option>
@@ -668,7 +666,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 ),
                               })
                             }}
-                            className="w-12 text-xs text-center font-bold text-slate-900 rounded-lg border border-slate-300 bg-white px-1 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none no-spinners"
+                            className="w-12 text-xs text-center font-bold text-slate-900 rounded-lg border border-slate-300 bg-white px-1 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none no-spinners"
                           />
                         </div>
 
@@ -697,7 +695,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                   entry.id === indicator.id ? { ...entry, conditions: e.target.value } : entry
                                 ),
                               })}
-                              className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none resize-y mt-0.5"
+                              className="w-full text-xs rounded-lg border border-slate-300 px-2 py-1.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none resize-y mt-0.5"
                               rows={2}
                               placeholder="Conditions..."
                             />
@@ -712,7 +710,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                   entry.id === indicator.id ? { ...entry, expectedResults: e.target.value } : entry
                                 ),
                               })}
-                              className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none resize-y mt-0.5"
+                              className="w-full text-xs rounded-lg border border-slate-300 px-2 py-1.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none resize-y mt-0.5"
                               rows={2}
                               placeholder="Résultats attendus..."
                             />
@@ -739,7 +737,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                       : entry
                                   ),
                                 })}
-                                className="w-24 text-[11px] rounded border border-slate-200 px-1.5 py-0.5 focus:border-blue-500 focus:outline-none"
+                                className="w-24 text-[11px] rounded-lg border border-slate-300 px-1.5 py-0.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                                 placeholder={`${pts}pt`}
                               />
                             </div>
@@ -778,13 +776,13 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
       {viewMode === 'objectives' && <div className="space-y-6">
         {objectives.map((objective, index) => {
           const indicatorsWeight = objective.indicators.reduce((sum, indicator) => sum + indicator.weight, 0)
-          const weightValid = isWeightValid(indicatorsWeight)
+          const weightValid = indicatorsWeight === 100
           const canAddQuestion = objective.indicators.length < MAX_INDICATORS_PER_OBJECTIVE
           
           return (
             <article 
               key={objective.id} 
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+              className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
             >
               {/* OBJECTIVE HEADER */}
               <div className="p-6 bg-slate-50/50 border-b border-slate-200">
@@ -840,7 +838,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                     indicators: [...objective.indicators, createIndicator(getNextQuestionNumber())],
                   })}
                   disabled={!canAddQuestion}
-                  className="ml-3 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="ml-3 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   + Ajouter une question
                 </button>
@@ -849,9 +847,9 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
               {/* INDICATORS TABLE */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider sticky top-0 z-10">
+                  <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider sticky top-0 z-10">
                     <tr>
-                      <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-20 sticky left-0 bg-slate-100 z-20">O/Q</th>
+                      <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-20 sticky left-0 bg-slate-50 z-20">O/Q</th>
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 w-28">Taxonomie</th>
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 min-w-64">Comportement</th>
                       <th className="px-3 py-2 text-left font-semibold border-b border-slate-200 min-w-52">Conditions</th>
@@ -889,7 +887,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                   ),
                                 })
                               }}
-                              className="w-14 rounded-md border border-slate-200 bg-white px-1 py-0.5 text-center text-[10px] font-semibold text-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none no-spinners"
+                              className="w-14 rounded-lg border border-slate-300 bg-white px-1 py-0.5 text-center text-[10px] font-semibold text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none no-spinners"
                               title="Numero de question (Q)"
                             />
                           </div>
@@ -903,7 +901,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 entry.id === indicator.id ? { ...entry, taxonomy: e.target.value } : entry
                               ),
                             })}
-                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none bg-white"
+                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-white"
                           >
                             {TAXONOMY_LEVELS.map((level) => (
                               <option key={level} value={level}>{level}</option>
@@ -920,7 +918,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 entry.id === indicator.id ? { ...entry, behavior: e.target.value } : entry
                               ),
                             })}
-                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none"
+                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                             placeholder="Comportement observable"
                           />
                         </td>
@@ -934,7 +932,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 entry.id === indicator.id ? { ...entry, conditions: e.target.value } : entry
                               ),
                             })}
-                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none resize-y"
+                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none resize-y"
                             rows={4}
                             placeholder="Conditions..."
                           />
@@ -949,7 +947,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 entry.id === indicator.id ? { ...entry, expectedResults: e.target.value } : entry
                               ),
                             })}
-                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none resize-y"
+                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none resize-y"
                             rows={4}
                             placeholder="Résultats attendus..."
                           />
@@ -972,7 +970,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                 ),
                               })
                             }}
-                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-center font-bold text-slate-900 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none no-spinners"
+                            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-center font-bold text-slate-900 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none no-spinners"
                           />
                         </td>
                         
@@ -980,7 +978,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                           <div className="space-y-1.5">
                             {[3, 2, 1, 0].map((points) => (
                               <div key={points} className="flex gap-1.5">
-                                <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-[10px] font-bold text-slate-600">
+                                <span className="shrink-0 w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-[10px] font-bold text-slate-600">
                                   {points}
                                 </span>
                                 <input
@@ -993,7 +991,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                                         : entry
                                     ),
                                   })}
-                                  className="flex-1 min-w-0 text-xs rounded border border-slate-200 px-2 py-0.5 focus:border-blue-500 focus:outline-none"
+                                  className="flex-1 min-w-0 text-xs rounded-lg border border-slate-300 px-2 py-0.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                                   placeholder={`${points}pt`}
                                 />
                               </div>
@@ -1029,7 +1027,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                     indicators: [...objective.indicators, createIndicator(getNextQuestionNumber())],
                   })}
                   disabled={objective.indicators.length >= MAX_INDICATORS_PER_OBJECTIVE}
-                  className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:border-blue-400 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   + Ajouter une question
                 </button>
@@ -1037,7 +1035,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => duplicateObjective(objective)}
-                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     Dupliquer
                   </button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAllUsers } from '../../lib/db'
 import type { User } from '../../types'
@@ -53,10 +53,10 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     }
   }
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     setError('')
     onClose()
-  }
+  }, [onClose])
 
   // Fermer avec Escape
   useEffect(() => {
@@ -66,18 +66,18 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isOpen])
+  }, [isOpen, handleSkip])
 
   if (!isOpen) return null
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={handleSkip}
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-8 text-white relative">
           <button
@@ -141,7 +141,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
               <button
                 onClick={() => setMode('new')}
                 disabled={isLoading}
-                className="w-full p-3 bg-linear-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50"
               >
                 ➕ Créer un nouveau profil
               </button>
@@ -167,7 +167,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
                       if (e.key === 'Enter') handleNewUserSignup()
                     }}
                     placeholder="ex: Martin Dupont"
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                     autoFocus
                     disabled={isLoading}
                   />
@@ -176,7 +176,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
                 <button
                   onClick={handleNewUserSignup}
                   disabled={!name.trim() || isLoading}
-                  className="w-full p-3 bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Création...' : 'Créer le profil'}
                 </button>
@@ -188,7 +188,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
                     setName('')
                   }}
                   disabled={isLoading}
-                  className="w-full p-3 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-all disabled:opacity-50"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-all disabled:opacity-50"
                 >
                   ← Retour
                 </button>

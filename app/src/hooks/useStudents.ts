@@ -17,7 +17,7 @@ export const useStudents = () => {
 
   const replaceAll = useMutation({
     mutationFn: async (students: Student[]) => {
-      await db.transaction('rw', db.students, async () => {
+      await db.transaction('rw', [db.students], async () => {
         await db.students.clear()
         await db.students.bulkPut(students)
       })

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/db'
 import { useConfirm } from '../../hooks/useConfirm'
@@ -45,29 +45,23 @@ const TemplateCard = ({
     })
   }, [epGroups])
 
-  const [activeEpKey, setActiveEpKey] = useState(sortedEpKeys[0])
+  const activeEpKey = useMemo(() => {
+    return sortedEpKeys[0] ?? 'default'
+  }, [sortedEpKeys])
+  const [overrideEpKey, setOverrideEpKey] = useState<string | null>(null)
+  const resolvedEpKey = overrideEpKey && sortedEpKeys.includes(overrideEpKey) ? overrideEpKey : activeEpKey
 
-  useEffect(() => {
-    if (!sortedEpKeys.includes(activeEpKey)) {
-      setActiveEpKey(sortedEpKeys[0])
-    }
-  }, [sortedEpKeys, activeEpKey])
-
-  const activeEpTemplates = epGroups.get(activeEpKey) || []
+  const activeEpTemplates = useMemo(() => epGroups.get(resolvedEpKey) || [], [epGroups, resolvedEpKey])
 
   const sortedTemplates = useMemo(() => {
     return [...activeEpTemplates].sort((a, b) => (b.version || 1) - (a.version || 1))
   }, [activeEpTemplates])
 
-  const [activeVersionId, setActiveVersionId] = useState(sortedTemplates[0]?.id)
+  const activeVersionId = useMemo(() => sortedTemplates[0]?.id, [sortedTemplates])
+  const [overrideVersionId, setOverrideVersionId] = useState<string | null>(null)
+  const resolvedVersionId = overrideVersionId && sortedTemplates.find(t => t.id === overrideVersionId) ? overrideVersionId : activeVersionId
 
-  useEffect(() => {
-    if (sortedTemplates.length > 0 && !sortedTemplates.find(t => t.id === activeVersionId)) {
-      setActiveVersionId(sortedTemplates[0].id)
-    }
-  }, [sortedTemplates, activeVersionId])
-
-  const activeTemplate = sortedTemplates.find(t => t.id === activeVersionId) || sortedTemplates[0]
+  const activeTemplate = sortedTemplates.find(t => t.id === resolvedVersionId) || sortedTemplates[0]
   if (!activeTemplate) return null
 
   const colors = getModuleColor(activeTemplate.modulePrefix)
@@ -85,9 +79,9 @@ const TemplateCard = ({
           {sortedEpKeys.map(epKey => (
             <button
               key={epKey}
-              onClick={() => setActiveEpKey(epKey)}
+              onClick={() => setOverrideEpKey(epKey)}
               className={`px-3 py-1 rounded-md text-[11px] font-bold tracking-wide transition-all ${
-                activeEpKey === epKey
+                resolvedEpKey === epKey
                   ? `${colors.badge} border shadow-sm`
                   : 'text-slate-400 hover:text-slate-600 hover:bg-white'
               }`}
@@ -104,9 +98,9 @@ const TemplateCard = ({
           {sortedTemplates.map(t => (
             <button
               key={t.id}
-              onClick={() => setActiveVersionId(t.id)}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                activeVersionId === t.id
+              onClick={() => setOverrideVersionId(t.id)}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                resolvedVersionId === t.id
                   ? 'bg-violet-100 text-violet-700 border border-violet-200'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
               }`}
@@ -137,7 +131,7 @@ const TemplateCard = ({
                 </span>
               )}
               {activeTemplate.testIdentifier && (
-                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold">
+                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[10px] font-semibold">
                   {activeTemplate.testIdentifier}
                 </span>
               )}
@@ -175,7 +169,7 @@ const TemplateCard = ({
 
         {/* Objectives */}
         <div className="space-y-1">
-          {activeTemplate.objectives.map((obj: any) => (
+          {activeTemplate.objectives.map((obj: ObjectiveTemplate) => (
             <div key={obj.id} className="flex items-center gap-2.5 py-1.5">
               <span className={`shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold ${colors.bg} ${colors.text} ${colors.border} border`}>
                 {obj.number}
@@ -234,7 +228,13 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
   const [quickEntryText, setQuickEntryText] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [confirmFn, confirmDialogProps] = useConfirm()
-  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  // Charger les templates
+  const templatesQuery = useQuery({
+    queryKey: ['moduleTemplates'],
+    queryFn: () => db.moduleTemplates.orderBy('updatedAt').reverse().toArray(),
+  })
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -247,14 +247,14 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
   /* ────────── Import / Export ────────── */
 
   const handleExportAll = useCallback(async () => {
-    const templates = templatesQuery.data ?? []
-    if (templates.length === 0) return
+    const allTemplates = templatesQuery.data ?? []
+    if (allTemplates.length === 0) return
 
     const exportData = {
       type: 'mev-module-templates',
       version: 1,
       exportedAt: new Date().toISOString(),
-      templates: templates.filter(t => !t.id.startsWith('sys-')),
+      templates: allTemplates.filter(t => !t.id.startsWith('sys-')),
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
@@ -296,8 +296,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
         }
 
         queryClient.invalidateQueries({ queryKey: ['moduleTemplates'] })
-        setImportStatus('success')
-        setTimeout(() => setImportStatus('idle'), 3000)
+
         confirmFn({
           title: 'Import terminé',
           message: `${imported} squelette${imported > 1 ? 's' : ''} importé${imported > 1 ? 's' : ''} (${data.templates.length - imported} déjà existant${data.templates.length - imported > 1 ? 's' : ''}).`,
@@ -306,8 +305,6 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
           hideCancel: true,
         })
       } catch {
-        setImportStatus('error')
-        setTimeout(() => setImportStatus('idle'), 3000)
         confirmFn({
           title: 'Erreur d\'import',
           message: 'Le fichier sélectionné n\'est pas un export de squelettes MeV valide.',
@@ -319,12 +316,6 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
     }
     input.click()
   }, [queryClient, confirmFn])
-
-  // Charger les templates
-  const templatesQuery = useQuery({
-    queryKey: ['moduleTemplates'],
-    queryFn: () => db.moduleTemplates.orderBy('updatedAt').reverse().toArray(),
-  })
 
   // Mutations
   const createMutation = useMutation({
@@ -399,7 +390,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
     })
   }
 
-  const handleUpdateObjective = (index: number, field: keyof ObjectiveTemplate, value: any) => {
+  const handleUpdateObjective = (index: number, field: keyof ObjectiveTemplate, value: string | number) => {
     const newObjectives = [...formData.objectives]
     newObjectives[index] = { ...newObjectives[index], [field]: value }
     setFormData({ ...formData, objectives: newObjectives })
@@ -451,7 +442,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const templates = templatesQuery.data ?? []
+  const templates = useMemo(() => templatesQuery.data ?? [], [templatesQuery.data])
 
   // Stats
   const systemCount = templates.filter(t => t.id.startsWith('sys-')).length
@@ -490,7 +481,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
     <section className="space-y-6">
       {/* ═══════════════════ HEADER ═══════════════════ */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-5">
+        <div className="bg-linear-to-r from-slate-900 to-slate-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {onBack && (
@@ -519,7 +510,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleImport}
-                className="px-4 py-2.5 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
+                className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
                 title="Importer des squelettes depuis un fichier JSON"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -530,7 +521,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
               <button
                 onClick={handleExportAll}
                 disabled={!templatesQuery.data?.some(t => !t.id.startsWith('sys-'))}
-                className="px-4 py-2.5 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
+                className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
                 title="Exporter tous les squelettes personnalisés en JSON"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -543,7 +534,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
                   setIsCreating(true)
                   window.scrollTo({ top: 0, behavior: 'smooth' })
                 }}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-600/25 transition-all active:scale-95 flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95 flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -590,7 +581,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher un squelette…"
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all placeholder:text-slate-400"
             />
             {searchQuery && (
               <button
@@ -724,7 +715,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
               {quickEntryMode ? (
                 <div className="bg-linear-to-b from-blue-50 to-blue-50/30 rounded-lg p-4 border border-blue-200">
                   <div className="text-xs text-blue-800 font-semibold mb-1">
-                    Format : <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[11px]">Objectif | Poids | Description</code>
+                    Format : <code className="bg-blue-100 px-1.5 py-0.5 rounded-md text-[11px]">Objectif | Poids | Description</code>
                   </div>
                   <p className="text-[11px] text-blue-600 mb-3">
                     Un objectif par ligne. Le poids (1-10) et la description sont optionnels.
@@ -766,7 +757,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
                             value={obj.title}
                             onChange={(e) => handleUpdateObjective(index, 'title', e.target.value)}
                             placeholder="Titre de l'objectif"
-                            className="flex-1 px-3 py-1.5 rounded-md border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors"
                           />
                           <div className="relative w-20">
                             <input
@@ -775,7 +766,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
                               onChange={(e) => handleUpdateObjective(index, 'weight', Number(e.target.value))}
                               min="1"
                               max="10"
-                              className="w-full px-3 py-1.5 rounded-md border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-center"
+                              className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-center transition-colors"
                             />
                             <span className="absolute -top-1.5 right-2 text-[8px] font-bold text-slate-400 bg-slate-50 px-0.5">POIDS</span>
                           </div>
@@ -815,14 +806,14 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
               <button
                 onClick={resetForm}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={createMutation.isPending || updateMutation.isPending}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -886,7 +877,7 @@ export const TemplatesView = ({ onBack }: TemplatesViewProps) => {
             </p>
             <button
               onClick={() => setIsCreating(true)}
-              className="mt-5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95"
+              className="mt-5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95"
             >
               Créer un squelette
             </button>

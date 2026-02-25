@@ -200,7 +200,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
           <div className="flex items-center gap-2">
             <button 
               onClick={exportExcel}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95"
             >
               Export Excel
             </button>
@@ -209,7 +209,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
               onClick={exportPdfBatch} 
               disabled={isExporting}
               className={`
-                flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all
+                flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all
                 ${isExporting 
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm active:scale-95'
@@ -346,10 +346,10 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                   ))}
                   
                   {/* OBJECTIVE TOTAL ROW */}
-                  <tr className="bg-slate-100 border-y-2 border-slate-200 font-semibold">
+                  <tr className="bg-slate-100 border-t-2 border-slate-300 font-bold">
                     <td className="px-4 py-2.5 border-r border-slate-200">
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-600 text-white rounded text-[10px] flex items-center justify-center font-bold">
+                        <span className="w-6 h-6 bg-blue-600 text-white rounded-md text-[10px] flex items-center justify-center font-bold">
                           Σ
                         </span>
                         <span className="text-xs text-slate-800">Total O{objective.number}</span>

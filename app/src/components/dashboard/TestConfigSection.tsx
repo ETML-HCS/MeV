@@ -107,14 +107,14 @@ export const TestConfigSection = ({
 
    return (
       <>
-         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-linear-to-r from-slate-900 to-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-linear-to-r from-slate-900 to-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                <h3 className="text-xs font-semibold tracking-wider text-white uppercase">Configuration du test</h3>
                <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
                      <span className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold" title="Peut contenir du HTML simple">Logo PDF :</span>
                      <input
-                        className="w-36 sm:w-48 border border-white/20 rounded-md px-2 py-1 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all bg-white hover:bg-slate-50"
+                        className="w-36 sm:w-48 border border-white/20 rounded-lg px-2 py-1 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white hover:bg-slate-50"
                         value={settings.schoolName}
                         onChange={(e) => onUpdateSettings({ ...settings, schoolName: e.target.value })}
                         placeholder="ex: ETML / CFPV"
@@ -141,7 +141,7 @@ export const TestConfigSection = ({
                   <div>
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Module</label>
                      <input
-                        className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
+                        className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                         value={settings.moduleName}
                         onChange={(e) => onUpdateSettings({ ...settings, moduleName: e.target.value })}
                         placeholder="Nom du module"
@@ -150,7 +150,7 @@ export const TestConfigSection = ({
                   <div>
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">ID test</label>
                      <input
-                        className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
+                        className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                         value={settings.testIdentifier}
                         onChange={(e) => onUpdateSettings({ ...settings, testIdentifier: e.target.value })}
                         placeholder="ex: 164-t3"
@@ -160,7 +160,7 @@ export const TestConfigSection = ({
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Date</label>
                      <input
                         type="date"
-                        className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
+                        className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                         value={settings.testDate}
                         onChange={(e) => onUpdateSettings({ ...settings, testDate: e.target.value })}
                      />
@@ -186,7 +186,7 @@ export const TestConfigSection = ({
                   <div>
                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Correcteur</label>
                      <input
-                        className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
+                        className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                         value={settings.correctedBy}
                         onChange={(e) => onUpdateSettings({ ...settings, correctedBy: e.target.value })}
                         placeholder="Initiales"
@@ -200,7 +200,7 @@ export const TestConfigSection = ({
                         type="number"
                         min={1}
                         placeholder="Toutes"
-                        className="w-16 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
+                        className="w-16 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-slate-50/50 hover:border-slate-300"
                         value={settings.maxQuestionsToAnswer ?? ''}
                         onChange={(e) => {
                            const val = e.target.value.trim()
@@ -218,7 +218,7 @@ export const TestConfigSection = ({
                            step="0.1"
                            min={-1}
                            max={1}
-                           className="w-16 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
+                           className="w-16 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-slate-50/50 hover:border-slate-300"
                            value={settings.correctionError}
                            onChange={(e) => onUpdateSettings({ ...settings, correctionError: Math.max(-1, Math.min(1, Number(e.target.value))) })}
                         />
@@ -231,7 +231,7 @@ export const TestConfigSection = ({
                            type="number"
                            min={0}
                            max={100}
-                           className="w-14 border border-slate-200 rounded-md px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none bg-slate-50/50 hover:border-slate-300"
+                           className="w-14 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-slate-50/50 hover:border-slate-300"
                            value={Math.round(settings.threshold * 100)}
                            onChange={(e) => onUpdateSettings({ ...settings, threshold: Number(e.target.value) / 100 })}
                         />
@@ -268,7 +268,7 @@ export const TestConfigSection = ({
                <div className="mt-3">
                   <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
                   <textarea
-                     className="w-full border border-slate-200 rounded-md px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300 min-h-24 max-h-40 overflow-y-auto resize-none"
+                     className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300 min-h-24 max-h-40 overflow-y-auto resize-none"
                      value={settings.moduleDescription}
                      onChange={(e) => onUpdateSettings({ ...settings, moduleDescription: e.target.value })}
                      placeholder="Description du test..."

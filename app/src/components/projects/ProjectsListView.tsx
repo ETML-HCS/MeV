@@ -119,6 +119,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
     },
   })
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const projects = projectsQuery.data ?? []
   const evaluationTemplates = evaluationTemplatesQuery.data ?? []
 
@@ -240,7 +241,8 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   }
 
   // Grouper les projets par nom (qui représente le module/classe)
-  const modulesByName = useMemo(() => {
+  // puis par type (C, I, Numérique, Autres)
+  const { modulesByName, groupedModules } = useMemo(() => {
     const map = new Map<string, {
       name: string;
       parsed: ReturnType<typeof parseProjectName>;
@@ -268,21 +270,20 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
       })
     })
 
-    return Array.from(map.values())
-  }, [projects])
+    const modules = Array.from(map.values())
 
-  // Grouper les modules par type (C, I, Numérique, Autres)
-  const groupedModules = useMemo(() => {
-    const acc: Record<string, typeof modulesByName> = {}
-    modulesByName.forEach(module => {
+    // Grouper les modules par type (C, I, Numérique, Autres)
+    const grouped: Record<string, typeof modules> = {}
+    modules.forEach(module => {
       const groupType = module.parsed.groupType
-      if (!acc[groupType]) {
-        acc[groupType] = []
+      if (!grouped[groupType]) {
+        grouped[groupType] = []
       }
-      acc[groupType].push(module)
+      grouped[groupType].push(module)
     })
-    return acc
-  }, [modulesByName])
+
+    return { modulesByName: modules, groupedModules: grouped }
+  }, [projects])
 
   // Trier les groupes : C, I, Numérique, Autres
   const groupOrder = { 'C': 1, 'I': 2, 'Numérique': 3, 'Autres': 4 }
@@ -317,8 +318,8 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
   return (
     <section className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 bg-linear-to-r from-slate-900 to-slate-800">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 bg-linear-to-r from-slate-900 to-slate-800">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Module d'Évaluation</h1>
@@ -392,7 +393,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               </button>
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                   showCreateForm
                     ? 'bg-slate-600 text-white hover:bg-slate-500'
                     : 'bg-blue-500 text-white hover:bg-blue-400 shadow-lg shadow-blue-500/30'
@@ -407,7 +408,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
 
       {/* Create Form */}
       {showCreateForm && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
@@ -425,7 +426,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                   }
                 }}
                 placeholder="ex: Module 164 - Hiver 2026"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
               />
             </div>
             {evaluationTemplates.length > 0 && (
@@ -436,7 +437,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                 <select
                   value={selectedTemplateId || ''}
                   onChange={(e) => setSelectedTemplateId(e.target.value || null)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-green-500 focus:ring-1 focus:ring-green-100 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-slate-50/50 hover:border-slate-300"
                 >
                   <option value="">-- Aucun template --</option>
                   {evaluationTemplates.map(template => (
@@ -459,7 +460,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
               <button
                 onClick={handleCreate}
                 disabled={createMutation.isPending || !newProjectName.trim()}
-                className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {createMutation.isPending ? 'Création en cours...' : 'Créer l\'évaluation'}
               </button>
@@ -470,7 +471,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
 
       {/* Projects Grid */}
       {projects.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+        <div className="bg-white rounded-xl border-2 border-dashed border-slate-200 p-16 text-center">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -522,19 +523,19 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                           if (e.key === 'Enter') handleSaveEdit(module.name)
                           if (e.key === 'Escape') handleCancelEdit()
                         }}
-                        className="w-full border border-blue-300 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none transition-all bg-blue-50"
+                        className="w-full border border-blue-300 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-blue-50"
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleSaveEdit(module.name)}
                           disabled={updateMutation.isPending}
-                          className="px-3 py-1 bg-emerald-600 text-white text-xs font-semibold rounded hover:bg-emerald-700 disabled:opacity-40 transition-all"
+                          className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-all"
                         >
                           Valider
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="px-3 py-1 bg-slate-200 text-slate-700 text-xs font-semibold rounded hover:bg-slate-300 transition-all"
+                          className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-all"
                         >
                           Annuler
                         </button>
@@ -561,7 +562,7 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                       </div>
                       <div className="flex items-center gap-1 flex-wrap">
                         {parsed.identificationModule && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                             parsed.groupType === 'I'
                               ? 'bg-emerald-100 text-emerald-700'
                               : parsed.groupType === 'C'
@@ -574,12 +575,12 @@ export const ProjectsListView = ({ onSelectProject, onOpenTemplates, onOpenEvalu
                           </span>
                         )}
                         {parsed.trimestreAcademique && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md">
                             {parsed.trimestreAcademique}
                           </span>
                         )}
                         {parsed.groupeLabo && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-md">
                             {parsed.groupeLabo}
                           </span>
                         )}

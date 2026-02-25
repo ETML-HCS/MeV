@@ -16,6 +16,8 @@ const electronAPI = {
   // Projects
   getProjects: () => ipcRenderer.invoke('db:getProjects'),
   getProject: (id: string) => ipcRenderer.invoke('db:getProject', id),
+  getProjectsWhere: (field: string, value: any) => ipcRenderer.invoke('db:getProjectsWhere', field, value),
+  getProjectsSorted: (field: string, ascending?: boolean) => ipcRenderer.invoke('db:getProjectsSorted', field, ascending),
   createProject: (name: string, description: string) =>
     ipcRenderer.invoke('db:createProject', name, description),
   updateProject: (project: EvaluationProject) => ipcRenderer.invoke('db:updateProject', project),
@@ -52,6 +54,7 @@ const electronAPI = {
   getGrids: () => ipcRenderer.invoke('db:getGrids'),
   getGrid: (studentId: string) => ipcRenderer.invoke('db:getGrid', studentId),
   saveGrid: (grid: StudentGrid, projectId?: string) => ipcRenderer.invoke('db:saveGrid', grid, projectId),
+  deleteGrid: (studentId: string, projectId?: string) => ipcRenderer.invoke('db:deleteGrid', studentId, projectId),
   bulkAddGrids: (grids: StudentGrid[], projectId?: string) => ipcRenderer.invoke('db:bulkAddGrids', grids, projectId),
   bulkPutGrids: (grids: StudentGrid[], projectId?: string) => ipcRenderer.invoke('db:bulkPutGrids', grids, projectId),
   clearGrids: () => ipcRenderer.invoke('db:clearGrids'),

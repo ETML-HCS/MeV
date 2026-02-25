@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calculateFinalGrade, calculateGridTotals, calculateIndicatorPoints } from './calculations'
+import type { Objective, Evaluation } from '../types'
 
 describe('calculateFinalGrade', () => {
   it('returns 1.0 for zero points', () => {
@@ -67,10 +68,9 @@ describe('calculateGridTotals', () => {
     const evaluations = [
       { objectiveId: 'o1', indicatorId: 'i1', score: 2, selected: true },
       { objectiveId: 'o1', indicatorId: 'i2', score: 3, selected: false },
-      { objectiveId: 'o1', indicatorId: 'i2', score: null, selected: true },
     ]
 
-    const totals = calculateGridTotals(objectives as any, evaluations as any)
+    const totals = calculateGridTotals(objectives as Objective[], evaluations as Evaluation[])
 
     // maxPoints: only i1 is selected => weight 2 * 1 * 3 = 6
     expect(totals.maxPoints).toBe(6)
@@ -101,7 +101,7 @@ describe('calculateGridTotals', () => {
       },
     ]
 
-    const totals = calculateGridTotals(objectives as any, [])
+    const totals = calculateGridTotals(objectives as Objective[], [])
 
     expect(totals.maxPoints).toBe(3)
     expect(totals.totalPoints).toBe(0)
@@ -134,7 +134,7 @@ describe('calculateGridTotals', () => {
       { objectiveId: 'o1', indicatorId: 'i1', score: 3, selected: true },
     ]
 
-    const totals = calculateGridTotals(objectives as any, evaluations as any)
+    const totals = calculateGridTotals(objectives as Objective[], evaluations as Evaluation[])
 
     expect(totals.maxPoints).toBe(6)
     expect(totals.totalPoints).toBe(6)

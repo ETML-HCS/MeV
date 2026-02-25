@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react'
 import { Document, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer'
 import JSZip from 'jszip'
@@ -471,15 +472,16 @@ const IndicatorBadges: React.FC<{
  * et la convertit en composants React-PDF (<Text>).
  * Supporte <span>, <strong>, <b>, <em>, <i> avec attribut style optionnel.
  */
-const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: object): React.ReactElement | null => {
+const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: React.ComponentProps<typeof Text>['style']): React.ReactElement | null => {
   if (!htmlString) return null
 
   // Si pas de balises HTML, retourner le texte brut
   if (!/<[a-z]/i.test(htmlString)) {
-    return <Text style={defaultStyle as any}>{htmlString}</Text>
+    return <Text style={defaultStyle}>{htmlString}</Text>
   }
 
   // Tokeniser la chaîne en segments: texte brut + balises HTML
+   
   const tagRegex = /<(span|strong|b|em|i)(?:\s+style="([^"]*)")?>([^<]*)<\/\1>/gi
   const elements: React.ReactElement[] = []
   let lastIndex = 0
@@ -491,7 +493,7 @@ const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: object): 
     if (match.index > lastIndex) {
       const textBefore = htmlString.substring(lastIndex, match.index)
       if (textBefore.trim()) {
-        elements.push(<Text key={key++} style={defaultStyle as any}>{textBefore}</Text>)
+        elements.push(<Text key={key++} style={defaultStyle}>{textBefore}</Text>)
       }
     }
 
@@ -500,7 +502,7 @@ const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: object): 
     const textContent = match[3]
 
     // Construire le style pour cette balise
-    const computedStyle: Record<string, any> = { ...(defaultStyle || {}) }
+    const computedStyle: Record<string, string | number> = { ...((defaultStyle as Record<string, string | number>) || {}) }
 
     // Appliquer les styles par défaut selon la balise
     if (tagName === 'strong' || tagName === 'b') {
@@ -548,14 +550,14 @@ const parseHtmlToPdf = (htmlString: string | undefined, defaultStyle?: object): 
   if (lastIndex < htmlString.length) {
     const remaining = htmlString.substring(lastIndex).replace(/<[^>]+>/g, '')
     if (remaining.trim()) {
-      elements.push(<Text key={key++} style={defaultStyle as any}>{remaining}</Text>)
+      elements.push(<Text key={key++} style={defaultStyle}>{remaining}</Text>)
     }
   }
 
   // Si aucun élément trouvé (regex n'a rien matché), retourner le texte nettoyé
   if (elements.length === 0) {
     const cleaned = htmlString.replace(/<[^>]+>/g, '')
-    return <Text style={defaultStyle as any}>{cleaned}</Text>
+    return <Text style={defaultStyle}>{cleaned}</Text>
   }
 
   return (

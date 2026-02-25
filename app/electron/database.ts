@@ -384,6 +384,58 @@ export function saveGridToProject(projectId: string, grid: StudentGrid): void {
   }
 }
 
+export function deleteGrid(studentId: string, projectId?: string): void {
+  const db = getDatabase()
+
+  if (projectId) {
+    // Supprimer la grille d'un projet spécifique
+    const project = getProject(projectId)
+    if (!project) {
+      console.error('Failed to delete grid: Project not found:', projectId)
+      return
+    }
+
+    const updatedGrids = project.grids.filter((g) => g.studentId !== studentId)
+
+    try {
+      db.prepare(
+        `UPDATE projects
+         SET grids = ?, updatedAt = ?
+         WHERE id = ?`,
+      ).run(
+        JSON.stringify(updatedGrids),
+        new Date().toISOString(),
+        projectId,
+      )
+    } catch (error) {
+      console.error('Failed to update project in database:', error)
+      throw error
+    }
+  } else {
+    // Supprimer la grille de tous les projets (cas général)
+    const projects = getProjects()
+    for (const project of projects) {
+      const updatedGrids = project.grids.filter((g) => g.studentId !== studentId)
+      if (updatedGrids.length !== project.grids.length) {
+        try {
+          db.prepare(
+            `UPDATE projects
+             SET grids = ?, updatedAt = ?
+             WHERE id = ?`,
+          ).run(
+            JSON.stringify(updatedGrids),
+            new Date().toISOString(),
+            project.id,
+          )
+        } catch (error) {
+          console.error('Failed to update project in database:', error)
+          throw error
+        }
+      }
+    }
+  }
+}
+
 export function createProject(name: string, description: string = ''): EvaluationProject {
   const db = getDatabase()
 
@@ -764,6 +816,7 @@ export function getCurrentUser(): User | null {
     name: string
     initials: string
     color: string
+    createdAt: string
     lastLogin: string
   } | undefined
   
@@ -931,6 +984,13 @@ export function getUserRecentProjects(userId: string, limit = 5): Array<{ projec
       description: string
       createdAt: string
       updatedAt: string
+      moduleNumber: string
+      modulePrefix: 'I' | 'C' | null
+      weightPercentage: number
+      settings: string
+      students: string
+      objectives: string
+      grids: string
       lastOpenedAt: string
     }>
   
@@ -967,8 +1027,10 @@ export function getUserProjectsByModule(userId: string): Array<{ module: string;
       id: string
       name: string
       description: string
+      createdAt: string
+      updatedAt: string
       moduleNumber: string
-      modulePrefix: string
+      modulePrefix: 'I' | 'C' | null
       weightPercentage: number
       settings: string
       students: string
@@ -1002,5 +1064,75 @@ export function getUserProjectsByModule(userId: string): Array<{ module: string;
   return Object.entries(grouped).map(([module, projects]) => ({
     module,
     projects,
+  }))
+}
+export function getProjectsWhere(field: string, value: any): EvaluationProject[] {
+  const db = getDatabase()
+  const rows = db
+    .prepare(`SELECT * FROM projects WHERE ${field} = ? ORDER BY updatedAt DESC`)
+    .all(value) as Array<{
+    id: string
+    name: string
+    description: string
+    createdAt: string
+    updatedAt: string
+    moduleNumber: string | null
+    modulePrefix: string | null
+    weightPercentage: number | null
+    settings: string
+    students: string
+    objectives: string
+    grids: string
+  }>
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+    moduleNumber: row.moduleNumber,
+    modulePrefix: row.modulePrefix as "I" | "C" | null,
+    weightPercentage: row.weightPercentage,
+    settings: JSON.parse(row.settings),
+    students: JSON.parse(row.students),
+    objectives: JSON.parse(row.objectives),
+    grids: JSON.parse(row.grids),
+  }))
+}
+
+export function getProjectsSorted(field: string, ascending = true): EvaluationProject[] {
+  const db = getDatabase()
+  const order = ascending ? "ASC" : "DESC"
+  const rows = db
+    .prepare(`SELECT * FROM projects ORDER BY ${field} ${order}`)
+    .all() as Array<{
+    id: string
+    name: string
+    description: string
+    createdAt: string
+    updatedAt: string
+    moduleNumber: string | null
+    modulePrefix: string | null
+    weightPercentage: number | null
+    settings: string
+    students: string
+    objectives: string
+    grids: string
+  }>
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+    moduleNumber: row.moduleNumber,
+    modulePrefix: row.modulePrefix as "I" | "C" | null,
+    weightPercentage: row.weightPercentage,
+    settings: JSON.parse(row.settings),
+    students: JSON.parse(row.students),
+    objectives: JSON.parse(row.objectives),
+    grids: JSON.parse(row.grids),
   }))
 }

@@ -135,7 +135,7 @@ export const LabGroupGradesView = ({ onBack }: LabGroupGradesViewProps) => {
   return (
     <section className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-5">
+        <div className="bg-linear-to-r from-slate-900 to-slate-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {onBack && (
@@ -248,7 +248,7 @@ export const LabGroupGradesView = ({ onBack }: LabGroupGradesViewProps) => {
                                 <span className="text-sm font-bold text-slate-700">{formatGrade(entry.grade)}</span>
                               </div>
                               <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-2">
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
                                   entry.prefix === 'I'
                                     ? 'bg-emerald-100 text-emerald-700'
                                     : entry.prefix === 'C'

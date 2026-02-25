@@ -93,8 +93,8 @@ export const BackupSection = () => {
 
    return (
       <>
-         <div className="bg-gradient-to-br from-white to-slate-50/30 rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-between">
+         <div className="bg-linear-to-br from-white to-slate-50/30 rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-linear-to-r from-blue-600 to-blue-500 flex items-center justify-between">
                <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

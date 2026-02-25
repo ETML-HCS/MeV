@@ -70,9 +70,9 @@ export const parseProjectName = (name: string) => {
   const normalized = (name || '').trim()
   const parts = normalized.split('-').map(p => p.trim())
   
-  let identificationModule = parts[0] || ''
-  let trimestreAcademique = parts[1] || ''
-  let groupeLabo = parts.slice(2).join('-') || ''
+  const identificationModule = parts[0] || ''
+  const trimestreAcademique = parts[1] || ''
+  const groupeLabo = parts.slice(2).join('-') || ''
 
   let groupType = 'Autres'
   let groupWeight = 4

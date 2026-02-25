@@ -128,7 +128,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
     <section className="space-y-6">
       {/* ═══════════════════ HEADER ═══════════════════ */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-5">
+        <div className="bg-linear-to-r from-slate-900 to-slate-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {onBack && (
@@ -157,7 +157,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
             <div className="flex items-center gap-2">
               <button
                 onClick={handleImport}
-                className="px-4 py-2.5 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
+                className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 transition-all active:scale-95 flex items-center gap-2"
                 title="Importer des templates depuis un fichier JSON"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
               <button
                 onClick={handleExportAll}
                 disabled={!templatesQuery.data?.length}
-                className="px-4 py-2.5 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
+                className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
                 title="Exporter tous les templates en JSON"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,6 +177,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
                 Exporter
               </button>
             </div>
+        </div>
         </div>
 
         {/* Stats + Search */}
@@ -187,7 +188,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
               <span className="text-slate-500">template{templates.length > 1 ? 's' : ''}</span>
             </div>
             {templates.length > 0 && (
-              <>
+              <div>
                 <span className="text-slate-300">|</span>
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="w-2 h-2 rounded-full bg-violet-400" />
@@ -195,7 +196,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
                     {templates.reduce((sum, t) => sum + t.objectives.reduce((s, o) => s + o.indicators.length, 0), 0)} questions au total
                   </span>
                 </div>
-              </>
+              </div>
             )}
           </div>
           {templates.length > 0 && (
@@ -208,7 +209,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher un template…"
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all placeholder:text-slate-400"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-200 outline-none transition-all placeholder:text-slate-400"
               />
               {searchQuery && (
                 <button
@@ -344,7 +345,7 @@ export const EvaluationTemplatesView = ({ onBack }: EvaluationTemplatesViewProps
                                 <span className="shrink-0 text-[10px] font-bold text-slate-400 w-5">
                                   Q{indicator.questionNumber ?? qIdx + 1}
                                 </span>
-                                <span className="px-1 py-0.5 bg-slate-200 text-slate-600 rounded text-[9px] font-bold shrink-0">
+                                <span className="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded-md text-[9px] font-bold shrink-0">
                                   {indicator.taxonomy}
                                 </span>
                                 <span className="flex-1 min-w-0 truncate">{indicator.behavior}</span>

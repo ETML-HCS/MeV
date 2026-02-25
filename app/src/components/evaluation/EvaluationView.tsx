@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { calculateFinalGrade, calculateGridTotals, calculateIndicatorPoints } from '../../lib/calculations'
 import type { Evaluation, Objective, Student, StudentGrid } from '../../types'
 
@@ -58,6 +58,18 @@ export const EvaluationView = ({
   onUpdateTestDateOverride,
 }: EvaluationViewProps) => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+  const [showOnlyUngraded, setShowOnlyUngraded] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
+  const [focusCursor, setFocusCursor] = useState(0)
+  const [showScrollButtons, setShowScrollButtons] = useState(false)
+  const [hasAlternateDate, setHasAlternateDate] = useState(false)
+  const [alternateDate, setAlternateDate] = useState('')
+  const [showDateInput, setShowDateInput] = useState(false)
+  const [collapsedObjectiveIds, setCollapsedObjectiveIds] = useState<string[]>([])
+
+  const hydratedStudentIdRef = useRef<string | null>(null)
+  const lastSavedSignatureRef = useRef<string>('')
+  const skipNextAutosaveRef = useRef(false)
 
   // Calculer les évaluations en fonction de l'étudiant sélectionné
   const computedEvaluations = useMemo(() => {
@@ -68,7 +80,7 @@ export const EvaluationView = ({
   }, [selectedStudentId, initialEvaluations])
 
   // Synchroniser l'état local avec les évaluations calculées
-  useEffect(() => {
+  useLayoutEffect(() => {
     const studentChanged = hydratedStudentIdRef.current !== selectedStudentId
     
     // Ne réinitialiser que si l'étudiant a changé OU si c'est vraiment de nouvelles données
@@ -80,13 +92,18 @@ export const EvaluationView = ({
       hydratedStudentIdRef.current = selectedStudentId
       lastSavedSignatureRef.current = incomingSignature
       skipNextAutosaveRef.current = true
-      setEvaluations(computedEvaluations)
+      if (JSON.stringify(evaluations) !== incomingSignature) {
+        setEvaluations(computedEvaluations)
+      }
     } else if (isReallyNewData && evaluations.length === 0) {
       // Accepter les données tardives seulement si on a vraiment rien localement
       lastSavedSignatureRef.current = incomingSignature
       skipNextAutosaveRef.current = true
-      setEvaluations(computedEvaluations)
+      if (JSON.stringify(evaluations) !== incomingSignature) {
+        setEvaluations(computedEvaluations)
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStudentId, computedEvaluations])
 
   // Synchroniser la date alternative avec la grille courante
@@ -248,6 +265,7 @@ export const EvaluationView = ({
       indicatorRows
         .filter((row) => !showOnlyUngraded || isIndicatorUngraded(row.objectiveId, row.indicatorId))
         .map((row) => row.key),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [indicatorRows, showOnlyUngraded, evaluations],
   )
 
@@ -264,7 +282,8 @@ export const EvaluationView = ({
       if (prev < 0) return 0
       return prev
     })
-  }, [focusMode, totalVisibleQuestions])
+     
+  }, [totalVisibleQuestions, focusMode])
 
   const upsertEvaluation = (next: Evaluation) => {
     setEvaluations((prev) => {
@@ -322,8 +341,9 @@ export const EvaluationView = ({
       (entry) => entry.objectiveId === objectiveId && entry.indicatorId === indicatorId,
     )
 
-    // Si maxQuestionsToAnswer est défini, on ne sélectionne pas par défaut
-    const defaultSelected = maxQuestionsToAnswer === null
+    // Si on attribue un score, la question doit être sélectionnée
+    // Si on retire le score (null), on garde le statut de sélection actuel
+    const shouldBeSelected = score !== null ? true : (existing?.selected ?? (maxQuestionsToAnswer === null))
 
     upsertEvaluation({
       objectiveId,
@@ -331,7 +351,7 @@ export const EvaluationView = ({
       score,
       customRemark: existing?.customRemark ?? '',
       calculatedPoints: score === null ? 0 : calculateIndicatorPoints(indicator.weight * objective.weight, score),
-      selected: existing?.selected ?? defaultSelected,
+      selected: shouldBeSelected,
     })
   }
 
@@ -425,6 +445,7 @@ export const EvaluationView = ({
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusMode, focusedKey, evaluations, readOnly, objectives, totalVisibleQuestions, canNext, canPrev, currentIndex, students])
 
   return (
@@ -456,7 +477,7 @@ export const EvaluationView = ({
           <select
             value={selectedStudentId ?? ''}
             onChange={(event) => onSelectStudent(event.target.value)}
-            className="flex-1 max-w-sm rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+            className="flex-1 max-w-sm rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-white"
             aria-label="Sélection élève"
           >
             <option value="">— Sélectionner un élève —</option>
@@ -508,7 +529,7 @@ export const EvaluationView = ({
                     value={alternateDate}
                     onChange={(e) => handleAlternateDateChange(e.target.value)}
                     disabled={readOnly}
-                    className="text-xs border border-slate-300 rounded px-2 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none disabled:opacity-50"
+                    className="text-xs border border-slate-300 rounded-lg px-2 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50"
                   />
                   <button
                     onClick={() => {
@@ -725,7 +746,7 @@ export const EvaluationView = ({
 
       {/* OVER LIMIT WARNING */}
       {selectedStudentId && maxQuestionsToAnswer !== null && hasTooManySelected && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl">
+        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
           <span className="w-8 h-8 rounded-lg bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
             <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 9v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
@@ -743,7 +764,7 @@ export const EvaluationView = ({
 
       {/* READ ONLY BANNER */}
       {readOnly && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl">
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
           <span className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
             <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 9v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
@@ -758,8 +779,8 @@ export const EvaluationView = ({
 
       {/* NO STUDENT SELECTED */}
       {!selectedStudentId && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-          <div className="mx-auto mb-4 w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+          <div className="mx-auto mb-4 w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
             <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 15l-6 6m0 0v-4m0 4h4m6-10a6 6 0 10-12 0c0 2.21 1.343 4.11 3.257 4.927" />
             </svg>
@@ -771,7 +792,7 @@ export const EvaluationView = ({
 
       {/* OBJECTIVES HIDDEN */}
       {selectedStudentId && !showObjectives && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
           <p className="text-sm text-slate-500">L'affichage des objectifs est masqué. Activez-le depuis le Dashboard.</p>
         </div>
       )}
@@ -946,7 +967,7 @@ export const EvaluationView = ({
                                 })
                               }
                               placeholder="Remarque personnalisée..."
-                              className="mt-1.5 w-full max-w-lg border border-slate-200 rounded-md px-2.5 py-1 text-xs text-slate-600 placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="mt-1.5 w-full max-w-lg border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-600 placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                           </div>
 
@@ -1086,7 +1107,7 @@ export const EvaluationView = ({
                           })
                         }
                         placeholder="Remarque personnalisée..."
-                        className="mt-1.5 w-full max-w-lg border border-slate-200 rounded-md px-2.5 py-1 text-xs text-slate-600 placeholder:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="mt-1.5 w-full max-w-lg border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-600 placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 

@@ -693,7 +693,7 @@ export const db = {
       }
       return await dexieDb.grids.delete(id)
     },
-    find: undefined as any, // Not used — grids.find() is called on arrays, not on db.grids
+    find: undefined as unknown as never, // Not used — grids.find() is called on arrays, not on db.grids
   },
   settings: {
     get: async (key: string): Promise<{ key: string; value: AppSettings } | undefined> => {
@@ -786,7 +786,7 @@ export const db = {
       return await dexieDb.projects.delete(id)
     },
     where: (field: string) => ({
-      equals: (value: any) => ({
+      equals: (value: string | number) => ({
         toArray: async (): Promise<EvaluationProject[]> => {
           if (ensureAPI()) {
             try {
@@ -869,7 +869,7 @@ export const db = {
       }),
     }),
   },
-  transaction: async <T>(_mode: string, _tables: any, callback: () => Promise<T>): Promise<T> => {
+  transaction: async <T>(_mode: string, _tables: unknown[], callback: () => Promise<T>): Promise<T> => {
     if (ensureAPI()) {
       try {
         return await callback()
@@ -877,7 +877,8 @@ export const db = {
         console.error('Electron transaction error, falling back to Dexie:', e)
       }
     }
-    return await dexieDb.transaction(_mode as any, _tables, callback)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await dexieDb.transaction(_mode as any, _tables as any, callback)
   },
 }
 
