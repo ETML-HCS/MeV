@@ -133,6 +133,8 @@ const electronAPI = {
     return (): void => { ipcRenderer.removeListener('update-downloaded', listener as Parameters<typeof ipcRenderer.on>[1]) }
   },
   installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
+  checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
 }
 
 // Exposer l'API au contexte du renderer

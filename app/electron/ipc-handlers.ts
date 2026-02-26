@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron'
+import { app, ipcMain, dialog } from 'electron'
 import fs from 'node:fs/promises'
 import * as teamsService from './teams-service.js'
 import type {
@@ -463,4 +463,17 @@ const { autoUpdater } = pkg
 
 ipcMain.handle('app:installUpdate', () => {
   autoUpdater.quitAndInstall()
+})
+
+ipcMain.handle('app:checkForUpdates', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    return { updateAvailable: !!result?.updateInfo, version: result?.updateInfo?.version }
+  } catch (err) {
+    return { updateAvailable: false, error: String(err) }
+  }
+})
+
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion()
 })

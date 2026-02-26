@@ -414,6 +414,27 @@ export const AppLayout = ({
                      </div>
                   </div>
                )}
+
+               {/* Version & Mises à jour */}
+               <div className="mt-4 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500 font-mono">
+                     v{__APP_VERSION__}
+                  </span>
+                  <button
+                     onClick={async () => {
+                        if (window.electronAPI?.checkForUpdates) {
+                           const result = await window.electronAPI.checkForUpdates()
+                           if (result?.updateAvailable) {
+                              // Les events update-available / update-downloaded seront émis automatiquement
+                           }
+                        }
+                     }}
+                     className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+                     title="Vérifier les mises à jour"
+                  >
+                     🔄 MAJ
+                  </button>
+               </div>
             </div>
          </aside>
 
