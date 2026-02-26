@@ -71,6 +71,7 @@ export const AppLayout = ({
 }: AppLayoutProps) => {
    const [activeMenuId, setActiveMenuId] = useState<AppTab | null>(null)
    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
+   const [updateCheckStatus, setUpdateCheckStatus] = useState<'idle' | 'checking' | 'up-to-date' | 'available'>('idle')
    const menuRef = useRef<HTMLDivElement>(null)
    const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
@@ -416,23 +417,49 @@ export const AppLayout = ({
                )}
 
                {/* Version & Mises à jour */}
-               <div className="mt-4 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 font-mono">
+               <div className="mt-4 pt-3 border-t border-slate-700/50 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400 font-mono font-medium">
                      v{__APP_VERSION__}
                   </span>
                   <button
+                     disabled={updateCheckStatus === 'checking'}
                      onClick={async () => {
                         if (window.electronAPI?.checkForUpdates) {
-                           const result = await window.electronAPI.checkForUpdates()
-                           if (result?.updateAvailable) {
-                              // Les events update-available / update-downloaded seront émis automatiquement
+                           setUpdateCheckStatus('checking')
+                           try {
+                              const result = await window.electronAPI.checkForUpdates()
+                              setUpdateCheckStatus(result?.updateAvailable ? 'available' : 'up-to-date')
+                           } catch {
+                              setUpdateCheckStatus('up-to-date')
                            }
+                           setTimeout(() => setUpdateCheckStatus('idle'), 4000)
                         }
                      }}
-                     className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+                     className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-all ${
+                        updateCheckStatus === 'up-to-date'
+                           ? 'bg-emerald-500/20 text-emerald-400'
+                           : updateCheckStatus === 'available'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : updateCheckStatus === 'checking'
+                                 ? 'bg-slate-800 text-slate-500 cursor-wait'
+                                 : 'text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700'
+                     }`}
                      title="Vérifier les mises à jour"
                   >
-                     🔄 MAJ
+                     {updateCheckStatus === 'checking' ? (
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                     ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                     )}
+                     {updateCheckStatus === 'checking' ? '...'
+                        : updateCheckStatus === 'up-to-date' ? '✓ À jour'
+                        : updateCheckStatus === 'available' ? '⬆ Dispo !'
+                        : 'MAJ'}
                   </button>
                </div>
             </div>

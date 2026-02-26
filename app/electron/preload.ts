@@ -135,6 +135,7 @@ const electronAPI = {
   installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
   checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  getUpdateStatus: () => ipcRenderer.invoke('app:getUpdateStatus'),
 }
 
 // Exposer l'API au contexte du renderer

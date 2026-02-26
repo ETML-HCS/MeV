@@ -12,12 +12,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 log.transports.file.level = 'info'
 autoUpdater.logger = log
 
+// État de mise à jour mis en cache pour éviter les problèmes de timing
+let cachedUpdateAvailable: any = null
+let cachedUpdateDownloaded: any = null
+
 // Événements de mise à jour
 autoUpdater.on('checking-for-update', () => {
   log.info('Vérification des mises à jour...')
 })
 autoUpdater.on('update-available', (info) => {
   log.info('Mise à jour disponible.', info)
+  cachedUpdateAvailable = info
   mainWindow?.webContents.send('update-available', info)
 })
 autoUpdater.on('update-not-available', (info) => {
@@ -34,8 +39,12 @@ autoUpdater.on('download-progress', (progressObj) => {
 })
 autoUpdater.on('update-downloaded', (info) => {
   log.info('Mise à jour téléchargée')
+  cachedUpdateDownloaded = info
   mainWindow?.webContents.send('update-downloaded', info)
 })
+
+// Exporter l'état pour les IPC handlers
+export { cachedUpdateAvailable, cachedUpdateDownloaded }
 
 // Garde une référence globale de la fenêtre pour éviter le garbage collection
 let mainWindow: BrowserWindow | null = null
@@ -103,8 +112,11 @@ app.whenReady().then(async () => {
   })
 
   // Lancer la vérification des mises à jour (ne fonctionne qu'en production)
+  // Délai de 5s pour laisser le renderer monter ses listeners IPC
   if (app.isPackaged) {
-    autoUpdater.checkForUpdatesAndNotify()
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify()
+    }, 5000)
   }
 })
 

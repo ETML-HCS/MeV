@@ -460,6 +460,7 @@ ipcMain.handle('teams:logout', () => {
 // ─── Auto-updater ────────────────────────────────────────────────────────────
 import pkg from 'electron-updater'
 const { autoUpdater } = pkg
+import { cachedUpdateAvailable, cachedUpdateDownloaded } from './main.js'
 
 ipcMain.handle('app:installUpdate', () => {
   autoUpdater.quitAndInstall()
@@ -476,4 +477,11 @@ ipcMain.handle('app:checkForUpdates', async () => {
 
 ipcMain.handle('app:getVersion', () => {
   return app.getVersion()
+})
+
+ipcMain.handle('app:getUpdateStatus', () => {
+  return {
+    updateAvailable: cachedUpdateAvailable,
+    updateDownloaded: cachedUpdateDownloaded,
+  }
 })

@@ -114,6 +114,13 @@ function App() {
       const cleanupDownloaded = window.electronAPI.onUpdateDownloaded((info) => {
         setUpdateDownloaded(info)
       })
+
+      // Récupérer l'état en cache au cas où les events auraient déjà été émis
+      window.electronAPI.getUpdateStatus?.().then((status: any) => {
+        if (status?.updateDownloaded) setUpdateDownloaded(status.updateDownloaded)
+        else if (status?.updateAvailable) setUpdateAvailable(status.updateAvailable)
+      })
+
       return () => {
         cleanupAvailable()
         cleanupDownloaded()
