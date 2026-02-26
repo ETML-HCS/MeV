@@ -458,7 +458,8 @@ ipcMain.handle('teams:logout', () => {
 })
 
 // ─── Auto-updater ────────────────────────────────────────────────────────────
-import { autoUpdater } from 'electron-updater'
+import pkg from 'electron-updater'
+const { autoUpdater } = pkg
 
 ipcMain.handle('app:installUpdate', () => {
   autoUpdater.quitAndInstall()

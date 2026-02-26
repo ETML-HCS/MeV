@@ -14,6 +14,7 @@ import { StudentsView } from './components/students/StudentsView'
 import { SynthesisView } from './components/synthesis/SynthesisView'
 import { TemplatesView } from './components/templates/TemplatesView'
 import { EvaluationTemplatesView } from './components/evaluation-templates/EvaluationTemplatesView'
+import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { LabGroupGradesView } from './components/grades/LabGroupGradesView'
 import { ModuleSummaryView } from './components/grades/ModuleSummaryView'
 import { useEvaluation } from './hooks/useEvaluation'
@@ -740,6 +741,7 @@ function App() {
         onSelectProject={handleOpenProject}
       >
       {activeTab === 'dashboard' && (
+        <ErrorBoundary section="Configuration">
         <DashboardView
           students={students}
           objectives={objectives}
@@ -765,6 +767,7 @@ function App() {
           }}
           testType={settings.testType}
         />
+        </ErrorBoundary>
       )}
 
       {activeTab === 'students' && (
@@ -780,6 +783,7 @@ function App() {
       )}
 
       {activeTab === 'objectives' && (
+        <ErrorBoundary section="Objectifs">
         <ObjectivesView
           project={projectQuery.data}
           objectives={objectives}
@@ -805,6 +809,7 @@ function App() {
             await reorder.mutateAsync(list)
           }}
         />
+        </ErrorBoundary>
       )}
 
       {activeTab === 'master-grid' && (
@@ -829,6 +834,7 @@ function App() {
       )}
 
       {activeTab === 'evaluation' && (
+        <ErrorBoundary section="Évaluation">
         <EvaluationView
           students={students}
           objectives={objectives}
@@ -852,9 +858,11 @@ function App() {
           onUpdateTestDateOverride={(date) => updateTestDateOverride.mutate(date)}
           scoringMode={settings.scoringMode}
         />
+        </ErrorBoundary>
       )}
 
       {activeTab === 'synthesis' && (
+        <ErrorBoundary section="Synthèse">
         <SynthesisView 
           objectives={objectives} 
           students={students} 
@@ -866,6 +874,7 @@ function App() {
           schoolName={settings.schoolName}
           scoringMode={settings.scoringMode}
         />
+        </ErrorBoundary>
       )}
 
       {activeTab === 'templates' && (

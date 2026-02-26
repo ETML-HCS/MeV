@@ -38,6 +38,13 @@ const gradeColor = (grade: number) => {
   return 'text-red-600'
 }
 
+const gradeLabel = (grade: number): string => {
+  if (grade >= 5.5) return 'Excellent'
+  if (grade >= 4.0) return 'Suffisant'
+  if (grade >= 3.5) return 'Limite'
+  return 'Insuffisant'
+}
+
 export const EvaluationView = ({
   students,
   objectives,
@@ -462,6 +469,7 @@ export const EvaluationView = ({
               disabled={!canPrev}
               className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               title="Élève précédent (Ctrl+←)"
+              aria-label="Élève précédent"
             >
               ‹
             </button>
@@ -470,6 +478,7 @@ export const EvaluationView = ({
               disabled={!canNext}
               className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               title="Élève suivant (Ctrl+→)"
+              aria-label="Élève suivant"
             >
               ›
             </button>
@@ -583,8 +592,15 @@ export const EvaluationView = ({
             <div className="h-10 w-px bg-slate-200" />
             <div className="text-right">
               <div className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">Note</div>
-              <div className={`text-2xl font-black leading-tight ${Number.isFinite(finalGrade) ? gradeColor(finalGrade) : 'text-slate-300'}`}>
+              <div 
+                className={`text-2xl font-black leading-tight ${Number.isFinite(finalGrade) ? gradeColor(finalGrade) : 'text-slate-300'}`}
+                aria-label={Number.isFinite(finalGrade) ? `Note : ${finalGrade.toFixed(1)} sur 6 — ${gradeLabel(finalGrade)}` : 'Aucune note'}
+                role="status"
+              >
                 {Number.isFinite(finalGrade) ? finalGrade.toFixed(1) : '—'}
+                {Number.isFinite(finalGrade) && (
+                  <span className="sr-only"> — {gradeLabel(finalGrade)}</span>
+                )}
               </div>
             </div>
             <div className="h-10 w-px bg-slate-200" />
@@ -915,13 +931,15 @@ export const EvaluationView = ({
                             
                             {/* Score buttons */}
                             {scoringMode === '0-3' ? (
-                              <div className="flex items-center gap-2 mt-2.5">
+                              <div className="flex items-center gap-2 mt-2.5" role="group" aria-label={`Score pour ${indicator.behavior}`}>
                                 {SCORE_OPTIONS.map((option) => {
                                   const isScoreSelected = currentScore === option.value
                                   return (
                                     <button
                                       key={option.value}
                                       disabled={readOnly}
+                                      aria-pressed={isScoreSelected}
+                                      aria-label={`${option.value} points — ${option.desc}`}
                                       onClick={() => {
                                         const score = isScoreSelected ? null : option.value
                                         setScoreForIndicator(objective.id, indicator.id, score as 0 | 1 | 2 | 3 | null)
@@ -966,8 +984,9 @@ export const EvaluationView = ({
                                   }}
                                   className="w-20 h-10 rounded-lg border border-slate-300 px-3 text-center font-bold text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                   placeholder="Pts"
+                                  aria-label={`Points pour ${indicator.behavior} (max ${indicator.weight})`}
                                 />
-                                <span className="text-sm text-slate-500 font-medium">/ {indicator.weight}</span>
+                                <span className="text-sm text-slate-500 font-medium" aria-hidden="true">/ {indicator.weight}</span>
                               </div>
                             )}
 
@@ -996,6 +1015,7 @@ export const EvaluationView = ({
                                 })
                               }
                               placeholder="Remarque personnalisée..."
+                              aria-label={`Remarque pour ${indicator.behavior}`}
                               className="mt-1.5 w-full max-w-lg border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-600 placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                           </div>

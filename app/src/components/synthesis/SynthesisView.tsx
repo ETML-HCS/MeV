@@ -35,6 +35,23 @@ const colorForScore = (score: number | null | undefined, maxPoints?: number, sco
   return 'bg-white'
 }
 
+const scoreLevelLabel = (score: number | null | undefined, scoringMode: '0-3' | 'points' = '0-3', maxPoints?: number): string => {
+  if (score === null || score === undefined) return 'Non évalué'
+  if (scoringMode === 'points') {
+    if (!maxPoints) return `${score} pts`
+    const ratio = score / maxPoints
+    if (ratio < 0.33) return `${score}/${maxPoints} — Insuffisant`
+    if (ratio < 0.66) return `${score}/${maxPoints} — Partiel`
+    if (ratio < 0.9) return `${score}/${maxPoints} — Satisfaisant`
+    return `${score}/${maxPoints} — Excellent`
+  }
+  if (score === 0) return '0 — Insuffisant'
+  if (score === 1) return '1 — Partiel'
+  if (score === 2) return '2 — Satisfaisant'
+  if (score === 3) return '3 — Excellent'
+  return `${score}`
+}
+
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -270,18 +287,22 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
       {/* TABLE */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" role="table">
+            <caption className="sr-only">Synthèse des résultats de la classe — {evaluatedStudents.length} élèves, {objectives.length} objectifs</caption>
             <thead className="bg-slate-900 text-white text-xs uppercase tracking-wider sticky top-0 z-10">
               <tr>
                 <th 
+                  scope="col"
                   className="px-4 py-3 text-left font-semibold min-w-56 border-r border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors select-none"
                   onClick={() => toggleSort('name')}
+                  aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   Objectif / Question{sortArrow('name')}
                 </th>
                 {sortedStudents.map((student) => (
                   <th 
-                    key={student.id} 
+                    key={student.id}
+                    scope="col"
                     className="px-2 py-3 text-center font-semibold border-l border-slate-700 min-w-28 relative group"
                   >
                     <div className="truncate max-w-24 mx-auto" title={`${student.lastname} ${student.firstname}`}>
@@ -299,6 +320,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                       }}
                       className="absolute top-2 right-2 p-1 hover:bg-slate-700 rounded-md transition-all opacity-0 group-hover:opacity-100"
                       title="Voir le PDF"
+                      aria-label={`Voir le PDF de ${student.lastname} ${student.firstname}`}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -321,11 +343,11 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                       <td className="px-4 py-2.5 border-r border-slate-100">
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
-                            <span className="shrink-0 w-6 h-6 bg-slate-200 rounded text-[10px] font-bold text-slate-600 flex items-center justify-center">
+                            <span className="shrink-0 w-6 h-6 bg-slate-200 rounded text-[10px] font-bold text-slate-600 flex items-center justify-center" aria-hidden="true">
                               O{objective.number}
                             </span>
                             {indicator.questionNumber && (
-                              <span className="shrink-0 w-6 h-6 bg-emerald-100 rounded text-[10px] font-bold text-emerald-700 flex items-center justify-center">
+                              <span className="shrink-0 w-6 h-6 bg-emerald-100 rounded text-[10px] font-bold text-emerald-700 flex items-center justify-center" aria-hidden="true">
                                 Q{indicator.questionNumber}
                               </span>
                             )}
@@ -344,6 +366,7 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
                           <td
                             key={`${student.id}-${objective.id}-${indicator.id}`}
                             className={`px-2 py-2.5 text-center border-l border-slate-100 ${colorForScore(evaluation?.score)}`}
+                            aria-label={scoreLevelLabel(evaluation?.score ?? null, scoringMode)}
                           >
                             <span className="font-bold text-sm">
                               {evaluation?.score ?? '—'}

@@ -216,6 +216,7 @@ function initDefaultSettings(): void {
       schoolName: '',
       evaluationViewMode: 'objectives',
       objectivesViewMode: 'objectives',
+      scoringMode: '0-3',
     }
 
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
@@ -254,6 +255,7 @@ export function getSettings(): AppSettings {
     schoolName: '',
     evaluationViewMode: 'objectives',
     objectivesViewMode: 'objectives',
+    scoringMode: '0-3',
   }
 
   return { ...defaultSettings, ...JSON.parse(row.value) }
