@@ -27,6 +27,9 @@ interface AppLayoutProps {
    moduleProjects?: EvaluationProject[]
    activeProjectId?: string | null
    onSelectProject?: (projectId: string) => void
+   isZenMode?: boolean
+   onToggleZenMode?: () => void
+   onOpenShortcuts?: () => void
    children: ReactNode
 }
 
@@ -67,6 +70,9 @@ export const AppLayout = ({
    moduleProjects = [],
    activeProjectId,
    onSelectProject,
+   isZenMode,
+   onToggleZenMode,
+   onOpenShortcuts,
    children,
 }: AppLayoutProps) => {
    const [activeMenuId, setActiveMenuId] = useState<AppTab | null>(null)
@@ -121,6 +127,7 @@ export const AppLayout = ({
    return (
       <div className="flex h-screen bg-slate-100">
          {/* SIDEBAR */}
+         {!isZenMode && (
          <aside className="w-60 bg-slate-900 flex flex-col shadow-2xl shrink-0">
             {/* Logo */}
             <div className="px-5 pt-5 pb-4">
@@ -464,10 +471,25 @@ export const AppLayout = ({
                </div>
             </div>
          </aside>
+         )}
 
          {/* MAIN */}
-         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            {/* Zen Mode Exit Button (Floating) */}
+            {isZenMode && (
+               <button
+                  onClick={onToggleZenMode}
+                  className="absolute top-4 right-4 z-50 bg-slate-800/80 hover:bg-slate-700 text-white p-2 rounded-full shadow-lg backdrop-blur-sm transition-all group"
+                  title="Quitter le mode Zen (F11)"
+               >
+                  <svg className="w-5 h-5 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+               </button>
+            )}
+
             {/* Top Bar */}
+            {!isZenMode && (
             <header className="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0">
                <div className="flex items-center gap-3">
                   <h2 className="text-lg font-bold text-slate-900">
@@ -479,6 +501,17 @@ export const AppLayout = ({
                </div>
 
                <div className="flex items-center gap-3">
+                  {onOpenShortcuts && (
+                     <button
+                        onClick={onOpenShortcuts}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                        title="Raccourcis clavier (Ctrl+H)"
+                     >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                     </button>
+                  )}
                   {onReturnToProjects && (
                      <button
                         onClick={onReturnToProjects}
@@ -494,10 +527,11 @@ export const AppLayout = ({
                   )}
                </div>
             </header>
+            )}
 
             {/* Content */}
-            <main className="flex-1 overflow-auto">
-               <div className="max-w-7xl mx-auto p-6 lg:p-8">
+            <main className={`flex-1 overflow-auto ${isZenMode ? 'bg-white' : ''}`}>
+               <div className={`mx-auto ${isZenMode ? 'max-w-none p-8' : 'max-w-7xl p-6 lg:p-8'}`}>
                   {children}
                </div>
             </main>

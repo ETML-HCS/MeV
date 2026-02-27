@@ -17,6 +17,7 @@ import { EvaluationTemplatesView } from './components/evaluation-templates/Evalu
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { LabGroupGradesView } from './components/grades/LabGroupGradesView'
 import { ModuleSummaryView } from './components/grades/ModuleSummaryView'
+import { ShortcutsDialog } from './components/shared/ShortcutsDialog'
 import { useEvaluation } from './hooks/useEvaluation'
 import { useObjectives } from './hooks/useObjectives'
 import { useStudents } from './hooks/useStudents'
@@ -38,6 +39,8 @@ function App() {
   const [moduleSummaryName, setModuleSummaryName] = useState<string | null>(null)
   const [updateAvailable, setUpdateAvailable] = useState<any>(null)
   const [updateDownloaded, setUpdateDownloaded] = useState<any>(null)
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
+  const [isZenMode, setIsZenMode] = useState(false)
   const hydratedProjectIdRef = useRef<string | null>(null)
   const lastSavedSnapshotRef = useRef<string>('')
   
@@ -444,6 +447,18 @@ function App() {
         return
       }
 
+      if ((event.ctrlKey || event.metaKey) && key === 'h') {
+        event.preventDefault()
+        setShowShortcutsDialog(true)
+        return
+      }
+
+      if (key === 'f11') {
+        event.preventDefault()
+        setIsZenMode(prev => !prev)
+        return
+      }
+
       if (isTextInput(event.target)) return
 
       if (activeProjectId && event.altKey && !event.ctrlKey && !event.metaKey) {
@@ -746,6 +761,9 @@ function App() {
         moduleProjects={moduleProjects}
         activeProjectId={activeProjectId}
         onSelectProject={handleOpenProject}
+        isZenMode={isZenMode}
+        onToggleZenMode={() => setIsZenMode(prev => !prev)}
+        onOpenShortcuts={() => setShowShortcutsDialog(true)}
       >
       {activeTab === 'dashboard' && (
         <ErrorBoundary section="Configuration">
@@ -926,6 +944,11 @@ function App() {
         </div>
       </div>
     )}
+
+    <ShortcutsDialog 
+      isOpen={showShortcutsDialog} 
+      onClose={() => setShowShortcutsDialog(false)} 
+    />
     </>
   )
 }
