@@ -3,7 +3,7 @@
   "productName": "MeV",
   "description": "Application de gestion et d'évaluation des modules pour l'ETML",
   "private": true,
-  "version": "3.6.8",
+  "version": "3.6.9",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
