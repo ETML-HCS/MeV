@@ -284,6 +284,85 @@ export const SynthesisView = ({ objectives, students, grids, testDate, testIdent
         </div>
       )}
 
+      {/* STATISTIQUES PAR QUESTION */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <h3 className="text-sm font-bold text-slate-700 mb-3">Questions à revoir (Taux de réussite &lt; 50%)</h3>
+        <div className="space-y-2">
+          {objectives.flatMap(obj => obj.indicators.map(ind => {
+            let totalScore = 0;
+            let maxPossible = 0;
+            let answeredCount = 0;
+            
+            evaluatedStudents.forEach(student => {
+              const grid = grids.find(g => g.studentId === student.id);
+              const eval_ = grid?.evaluations.find(e => e.objectiveId === obj.id && e.indicatorId === ind.id);
+              if (eval_?.score !== null && eval_?.score !== undefined) {
+                answeredCount++;
+                if (scoringMode === 'points') {
+                  totalScore += eval_.score;
+                  maxPossible += ind.weight;
+                } else {
+                  totalScore += eval_.score;
+                  maxPossible += 3;
+                }
+              }
+            });
+
+            const successRate = maxPossible > 0 ? (totalScore / maxPossible) * 100 : 0;
+            
+            return {
+              objNum: obj.number,
+              qNum: ind.questionNumber,
+              behavior: ind.behavior,
+              successRate,
+              answeredCount
+            };
+          }))
+          .filter(q => q.answeredCount > 0 && q.successRate < 50)
+          .sort((a, b) => a.successRate - b.successRate)
+          .map((q, i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">
+                  O{q.objNum}{q.qNum ? `.Q${q.qNum}` : ''}
+                </span>
+                <span className="text-sm text-slate-700 font-medium">{q.behavior}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-24 h-2 bg-red-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-500" style={{ width: `${q.successRate}%` }} />
+                </div>
+                <span className="text-xs font-bold text-red-700 w-10 text-right">{q.successRate.toFixed(0)}%</span>
+              </div>
+            </div>
+          ))}
+          
+          {objectives.flatMap(obj => obj.indicators).length > 0 && 
+           objectives.flatMap(obj => obj.indicators).every(ind => {
+             let maxPossible = 0;
+             let totalScore = 0;
+             evaluatedStudents.forEach(student => {
+               const grid = grids.find(g => g.studentId === student.id);
+               const eval_ = grid?.evaluations.find(e => e.objectiveId === obj.id && e.indicatorId === ind.id);
+               if (eval_?.score !== null && eval_?.score !== undefined) {
+                 if (scoringMode === 'points') {
+                   totalScore += eval_.score;
+                   maxPossible += ind.weight;
+                 } else {
+                   totalScore += eval_.score;
+                   maxPossible += 3;
+                 }
+               }
+             });
+             return maxPossible === 0 || (totalScore / maxPossible) * 100 >= 50;
+           }) && (
+            <div className="text-sm text-slate-500 italic p-3 text-center bg-slate-50 rounded-lg border border-slate-100">
+              Toutes les questions ont un taux de réussite supérieur à 50%.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* TABLE */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

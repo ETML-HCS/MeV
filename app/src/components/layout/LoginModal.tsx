@@ -88,7 +88,11 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
           </button>
           <h2 className="text-2xl font-bold">Bienvenue</h2>
           <p className="text-blue-100 text-sm mt-2">
-            Identifiez-vous pour accéder à vos évaluations
+            Identifiez-vous pour accéder à vos évaluations.
+            <br />
+            <span className="text-xs opacity-80">
+              (Les données restent locales, le profil sert uniquement à pré-remplir le nom du correcteur et à mémoriser vos préférences d'affichage)
+            </span>
           </p>
         </div>
 

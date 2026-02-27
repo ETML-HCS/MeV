@@ -131,7 +131,11 @@ export const AppLayout = ({
          <aside className="w-60 bg-slate-900 flex flex-col shadow-2xl shrink-0">
             {/* Logo */}
             <div className="px-5 pt-5 pb-4">
-               <div className="flex items-center gap-3">
+               <button 
+                  onClick={onReturnToProjects}
+                  className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg"
+                  title="Retour au menu principal"
+               >
                   <img src="./favicon.jpg" alt="MeV Logo" className="w-9 h-9 rounded-lg shadow-lg" />
                   <div>
                      <h1 className="font-bold text-base text-white tracking-tight leading-none">
@@ -139,7 +143,7 @@ export const AppLayout = ({
                      </h1>
                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">Module d'évaluation</p>
                   </div>
-               </div>
+               </button>
             </div>
 
             {/* Divider */}

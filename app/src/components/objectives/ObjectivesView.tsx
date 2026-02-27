@@ -799,16 +799,16 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                   
                   <input
                     value={objective.title}
-                    onChange={(e) => debouncedSave({ ...objective, title: e.target.value })}
+                    onChange={(e) => onSave({ ...objective, title: e.target.value })}
                     className="flex-1 min-w-64 text-lg font-bold text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-2 py-1 transition-colors"
-                    placeholder="Titre de l'objectif"
+                    placeholder="Ex: Comprendre les concepts de base"
                   />
                   
                   <input
                     value={objective.description}
-                    onChange={(e) => debouncedSave({ ...objective, description: e.target.value })}
+                    onChange={(e) => onSave({ ...objective, description: e.target.value })}
                     className="w-80 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
-                    placeholder="Description courte..."
+                    placeholder="Ex: L'élève est capable de définir les termes clés..."
                   />
                   
                   <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200">
@@ -918,21 +918,21 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                         <td className="px-3 py-2 align-top">
                           <input
                             value={indicator.behavior}
-                            onChange={(e) => debouncedSave({
+                            onChange={(e) => onSave({
                               ...objective,
                               indicators: objective.indicators.map((entry) =>
                                 entry.id === indicator.id ? { ...entry, behavior: e.target.value } : entry
                               ),
                             })}
                             className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
-                            placeholder="Comportement observable"
+                            placeholder="Ex: Identifier les composants d'un réseau"
                           />
                         </td>
                         
                         <td className="px-3 py-2 align-top">
                           <textarea
                             value={indicator.conditions}
-                            onChange={(e) => debouncedSave({
+                            onChange={(e) => onSave({
                               ...objective,
                               indicators: objective.indicators.map((entry) =>
                                 entry.id === indicator.id ? { ...entry, conditions: e.target.value } : entry
@@ -940,14 +940,14 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                             })}
                             className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none resize-y"
                             rows={4}
-                            placeholder="Conditions..."
+                            placeholder="Ex: À l'aide du schéma fourni en annexe..."
                           />
                         </td>
                         
                         <td className="px-3 py-2 align-top">
                           <textarea
                             value={indicator.expectedResults}
-                            onChange={(e) => debouncedSave({
+                            onChange={(e) => onSave({
                               ...objective,
                               indicators: objective.indicators.map((entry) =>
                                 entry.id === indicator.id ? { ...entry, expectedResults: e.target.value } : entry
@@ -955,7 +955,7 @@ export const ObjectivesView = ({ project, objectives, grids, viewMode, onChangeV
                             })}
                             className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none resize-y"
                             rows={4}
-                            placeholder="Résultats attendus..."
+                            placeholder="Ex: L'élève a correctement identifié 4 composants sur 5..."
                           />
                         </td>
                         
